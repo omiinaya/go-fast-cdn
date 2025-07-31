@@ -80,6 +80,16 @@ func (h *ImageHandler) HandleImageUpload(c *gin.Context) {
 		return
 	}
 
+	// Check if file already exists by filename (name-based duplicate detection)
+	imageWithSameName := h.repo.GetImageByFileName(filteredFilename)
+	if len(imageWithSameName.Checksum) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":         "File with this name already exists",
+			"existing_file": imageWithSameName.FileName,
+		})
+		return
+	}
+
 	savedFilename, err := h.repo.AddImage(image)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())

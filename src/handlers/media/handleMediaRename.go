@@ -31,6 +31,14 @@ func (h *MediaHandler) HandleMediaRename(c *gin.Context) {
 		return
 	}
 
+	// Check if a file with the new name already exists
+	mediaWithNewName := h.repo.GetMediaByFileName(filteredNewName)
+	if len(mediaWithNewName.Checksum) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "File with this name already exists",
+		})
+		return
+	}
 	err = util.RenameUnifiedMediaFile(oldName, filteredNewName)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to rename file: %s", err.Error())
@@ -96,6 +104,14 @@ func (h *MediaHandler) HandleDocsRename(c *gin.Context) {
 	}
 
 	err = util.RenameFile(oldName, filteredNewName, "docs")
+	// Check if a file with the new name already exists
+	docWithNewName := h.repo.GetDocByFileName(filteredNewName)
+	if len(docWithNewName.Checksum) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "File with this name already exists",
+		})
+		return
+	}
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to rename file: %s", err.Error())
 		return

@@ -24,6 +24,14 @@ func (h *ImageHandler) HandleImageRename(c *gin.Context) {
 		return
 	}
 
+	// Check if a file with the new name already exists
+	imageWithNewName := h.repo.GetImageByFileName(filteredNewName)
+	if len(imageWithNewName.Checksum) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "File with this name already exists",
+		})
+		return
+	}
 	err = util.RenameFile(oldName, filteredNewName, "images")
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to rename file: %s", err.Error())

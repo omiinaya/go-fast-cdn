@@ -16,7 +16,7 @@ const (
 type Media struct {
 	gorm.Model
 
-	FileName string    `json:"fileName" gorm:"column:file_name"`
+	FileName string    `json:"fileName" gorm:"column:file_name;unique;not null"`
 	Checksum []byte    `json:"checksum"`
 	Type     MediaType `json:"mediaType" gorm:"type:varchar(20);not null;default:'document';column:type"`
 
@@ -77,6 +77,7 @@ type MediaRepository interface {
 	GetAllMedia() []Media
 	GetMediaByCheckSum(checksum []byte) Media
 	GetMediaByFileName(fileName string) Media
+	GetDocByFileName(fileName string) Media
 	GetMediaByType(mediaType MediaType) []Media
 	AddMedia(media Media) (string, error)
 	DeleteMedia(fileName string) (string, bool)

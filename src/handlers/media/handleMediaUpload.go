@@ -179,6 +179,19 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 	}
 	fmt.Printf("File content not found in database, proceeding with upload\n")
 
+	// Check if file already exists by filename (name-based duplicate detection)
+	fmt.Printf("Checking if file with name '%s' already exists in database\n", filteredFilename)
+	mediaWithSameName := h.repo.GetMediaByFileName(filteredFilename)
+	if len(mediaWithSameName.Checksum) > 0 {
+		fmt.Printf("File with same name already exists in database: %s\n", mediaWithSameName.FileName)
+		c.JSON(http.StatusConflict, gin.H{
+			"error":         "File with this name already exists",
+			"existing_file": mediaWithSameName.FileName,
+		})
+		return
+	}
+	fmt.Printf("File name not found in database, proceeding with upload\n")
+
 	// Save to database
 	fmt.Printf("[DEBUG] Saving media to database: %+v\n", media)
 	savedFilename, err := h.repo.AddMedia(media)
@@ -460,6 +473,16 @@ func (h *MediaHandler) HandleDocUpload(c *gin.Context) {
 		FileName: filteredFilename,
 		Checksum: fileHashBuffer[:],
 		Type:     models.MediaTypeDocument,
+	}
+
+	// Check if file already exists by filename (name-based duplicate detection)
+	docWithSameName := h.repo.GetDocByFileName(filteredFilename)
+	if len(docWithSameName.Checksum) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":         "File with this name already exists",
+			"existing_file": docWithSameName.FileName,
+		})
+		return
 	}
 
 	// Check if file already exists by checksum (content-based duplicate detection)

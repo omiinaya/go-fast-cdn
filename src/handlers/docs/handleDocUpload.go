@@ -76,6 +76,15 @@ func (h *DocHandler) HandleDocUpload(c *gin.Context) {
 		c.JSON(http.StatusConflict, gin.H{"error": "File already exists"})
 		return
 	}
+	// Check if file already exists by filename (name-based duplicate detection)
+	docWithSameName := h.repo.GetDocByFileName(filteredFilename)
+	if len(docWithSameName.Checksum) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":         "File with this name already exists",
+			"existing_file": docWithSameName.FileName,
+		})
+		return
+	}
 
 	savedFileName, err := h.repo.AddDoc(doc)
 	if err != nil {

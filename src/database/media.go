@@ -46,10 +46,24 @@ func (repo *mediaRepo) GetMediaByType(mediaType models.MediaType) []models.Media
 	repo.DB.Where("type = ?", mediaType).Find(&entries)
 	return entries
 }
+func (repo *mediaRepo) GetDocByFileName(fileName string) models.Media {
+	var entry models.Media
+	repo.DB.Where("file_name = ? AND type = ?", fileName, models.MediaTypeDocument).First(&entry)
+	return entry
+}
 
 func (repo *mediaRepo) AddMedia(media models.Media) (string, error) {
 	fmt.Printf("[DB] AddMedia called with: %+v\n", media)
-	result := repo.DB.Create(&media)
+
+	// Check if a file with the same name already exists
+	var existingMedia models.Media
+	result := repo.DB.Where("file_name = ?", media.FileName).First(&existingMedia)
+	if result.Error == nil {
+		fmt.Printf("[DB] File with name '%s' already exists in database\n", media.FileName)
+		return "", fmt.Errorf("file with name '%s' already exists", media.FileName)
+	}
+
+	result = repo.DB.Create(&media)
 	if result.Error != nil {
 		fmt.Printf("[DB] Error creating media record: %v\n", result.Error)
 		return "", result.Error
@@ -71,6 +85,13 @@ func (repo *mediaRepo) DeleteMedia(fileName string) (string, bool) {
 }
 
 func (repo *mediaRepo) RenameMedia(oldFileName, newFileName string) error {
+	// Check if a file with the new name already exists
+	var existingMedia models.Media
+	result := repo.DB.Where("file_name = ?", newFileName).First(&existingMedia)
+	if result.Error == nil {
+		return fmt.Errorf("file with name '%s' already exists", newFileName)
+	}
+
 	media := models.Media{}
 	return repo.DB.Model(&media).Where("file_name = ?", oldFileName).Update("file_name", newFileName).Error
 }

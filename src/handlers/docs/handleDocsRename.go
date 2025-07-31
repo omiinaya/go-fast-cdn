@@ -24,6 +24,14 @@ func (h *DocHandler) HandleDocsRename(c *gin.Context) {
 		return
 	}
 
+	// Check if a file with the new name already exists
+	docWithNewName := h.repo.GetDocByFileName(filteredNewName)
+	if len(docWithNewName.Checksum) > 0 {
+		c.JSON(http.StatusConflict, gin.H{
+			"error": "File with this name already exists",
+		})
+		return
+	}
 	err = util.RenameFile(oldName, filteredNewName, "docs")
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to rename file: %s", err.Error())
