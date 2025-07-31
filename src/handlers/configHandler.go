@@ -19,8 +19,18 @@ func NewConfigHandler(configRepo *database.ConfigRepo) *ConfigHandler {
 func (h *ConfigHandler) GetRegistrationEnabled(c *gin.Context) {
 	val, err := h.configRepo.Get("registration_enabled")
 	if err != nil || val == "" {
-		c.JSON(http.StatusOK, gin.H{"enabled": true}) // default: enabled
-		return
+		// If the config is not found, ensure it exists with default value
+		if err := database.EnsureDefaultConfigExists("registration_enabled", "true"); err != nil {
+			// If we still can't create it, use the default value
+			c.JSON(http.StatusOK, gin.H{"enabled": true})
+			return
+		}
+		// Try to get it again after creating it
+		val, err = h.configRepo.Get("registration_enabled")
+		if err != nil || val == "" {
+			c.JSON(http.StatusOK, gin.H{"enabled": true}) // fallback to default
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"enabled": val == "true"})
 }

@@ -102,7 +102,20 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	}
 	if userCount > 0 {
 		val, err := configRepo.Get("registration_enabled")
-		if err == nil && val == "false" {
+		if err != nil {
+			// If the config is not found, ensure it exists with default value
+			if err := database.EnsureDefaultConfigExists("registration_enabled", "true"); err != nil {
+				// If we still can't create it, allow registration (default behavior)
+				val = "true"
+			} else {
+				// Try to get it again after creating it
+				val, err = configRepo.Get("registration_enabled")
+				if err != nil {
+					val = "true" // fallback to default
+				}
+			}
+		}
+		if val == "false" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Registration is currently disabled"})
 			return
 		}

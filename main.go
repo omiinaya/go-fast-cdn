@@ -20,7 +20,21 @@ func init() {
 	database.Migrate() // Run database migrations
 }
 
+// initializeApp performs synchronous initialization that must complete before the app starts
+func initializeApp() error {
+	// Initialize default configuration values
+	if err := database.InitializeDefaultConfigs(); err != nil {
+		return err
+	}
+	return nil
+}
+
 func main() {
+	// Perform synchronous initialization before starting the server
+	if err := initializeApp(); err != nil {
+		log.Fatalf("Failed to initialize application: %v", err)
+	}
+
 	log.Printf("Starting server on port %v", os.Getenv("PORT"))
 	router.Router()
 }

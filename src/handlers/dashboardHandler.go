@@ -80,7 +80,20 @@ func (h *DashboardHandler) GetDashboard(c *gin.Context) {
 		recentRegs = append(recentRegs, gin.H{"email": u.Email, "role": u.Role, "created_at": u.CreatedAt})
 	}
 
-	regEnabled, _ := h.ConfigRepo.Get("registration_enabled")
+	regEnabled, err := h.ConfigRepo.Get("registration_enabled")
+	if err != nil {
+		// If the config is not found, ensure it exists with default value
+		if err := database.EnsureDefaultConfigExists("registration_enabled", "true"); err != nil {
+			// If we still can't create it, use the default value
+			regEnabled = "true"
+		} else {
+			// Try to get it again after creating it
+			regEnabled, err = h.ConfigRepo.Get("registration_enabled")
+			if err != nil {
+				regEnabled = "true" // Fallback to default
+			}
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"files": gin.H{
