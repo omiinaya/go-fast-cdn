@@ -10,6 +10,7 @@ import (
 	dbHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/db"
 	dHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/docs"
 	iHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/image"
+	mHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/media"
 	"github.com/kevinanielsen/go-fast-cdn/src/middleware"
 	"github.com/kevinanielsen/go-fast-cdn/src/util"
 )
@@ -47,16 +48,25 @@ func (s *Server) AddApiRoutes() {
 	cdn := api.Group("/cdn")
 	docHandler := dHandlers.NewDocHandler(database.NewDocRepo(database.DB))
 	imageHandler := iHandlers.NewImageHandler(database.NewImageRepo(database.DB))
+	mediaHandler := mHandlers.NewMediaHandler(database.NewMediaRepo(database.DB))
 
 	// Public CDN routes (read-only)
 	{
 		cdn.GET("/size", handlers.GetSizeHandler)
+
+		// Unified media endpoints
+		cdn.GET("/media/all", mediaHandler.HandleAllMedia)
+		cdn.GET("/media/:filename", mediaHandler.HandleMediaMetadata)
+		cdn.Static("/download/media", util.ExPath+"/uploads/media")
+		cdn.Static("/download/images", util.ExPath+"/uploads/images")
+		cdn.Static("/download/docs", util.ExPath+"/uploads/docs")
+
+		// Legacy endpoints for backward compatibility
 		cdn.GET("/doc/all", docHandler.HandleAllDocs)
 		cdn.GET("/doc/:filename", dHandlers.HandleDocMetadata)
 		cdn.GET("/image/all", imageHandler.HandleAllImages)
 		cdn.GET("/image/:filename", iHandlers.HandleImageMetadata)
-		cdn.Static("/download/images", util.ExPath+"/uploads/images")
-		cdn.Static("/download/docs", util.ExPath+"/uploads/docs")
+
 		cdn.GET("/dashboard", handlers.NewDashboardHandler(
 			database.NewDocRepo(database.DB),
 			database.NewImageRepo(database.DB),
@@ -69,26 +79,35 @@ func (s *Server) AddApiRoutes() {
 	cdnProtected := cdn.Group("/")
 	cdnProtected.Use(authMiddleware.RequireAuth())
 
+	// Unified media endpoints
 	upload := cdnProtected.Group("upload")
 	{
-		upload.POST("/image", imageHandler.HandleImageUpload)
-		upload.POST("/doc", docHandler.HandleDocUpload)
+		upload.POST("/media", mediaHandler.HandleMediaUpload)
+		// Legacy endpoints for backward compatibility
+		upload.POST("/image", mediaHandler.HandleImageUpload)
+		upload.POST("/doc", mediaHandler.HandleDocUpload)
 	}
 
 	delete := cdnProtected.Group("delete")
 	{
-		delete.DELETE("/image/:filename", imageHandler.HandleImageDelete)
-		delete.DELETE("/doc/:filename", docHandler.HandleDocDelete)
+		delete.DELETE("/media/:filename", mediaHandler.HandleMediaDelete)
+		// Legacy endpoints for backward compatibility
+		delete.DELETE("/image/:filename", mediaHandler.HandleImageDelete)
+		delete.DELETE("/doc/:filename", mediaHandler.HandleDocDelete)
 	}
 
 	rename := cdnProtected.Group("rename")
 	{
-		rename.PUT("/image", imageHandler.HandleImageRename)
-		rename.PUT("/doc", docHandler.HandleDocsRename)
+		rename.PUT("/media", mediaHandler.HandleMediaRename)
+		// Legacy endpoints for backward compatibility
+		rename.PUT("/image", mediaHandler.HandleImageRename)
+		rename.PUT("/doc", mediaHandler.HandleDocsRename)
 	}
 
 	resize := cdnProtected.Group("resize")
 	{
+		resize.PUT("/media", mediaHandler.HandleMediaResize)
+		// Legacy endpoints for backward compatibility
 		resize.PUT("/image", iHandlers.HandleImageResize)
 	}
 	// Admin-only routes

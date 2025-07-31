@@ -65,11 +65,10 @@ const RenameModal: React.FC<RenameModalProps> = ({
 
     if (typeof filename === "undefined") return;
 
-    const form = new FormData();
-    form.append("filename", filename);
-    form.append("newname", newFilename + "." + fileExt);
-
-    renameFileMutation.mutate(form);
+    renameFileMutation.mutate({
+      fileName: filename,
+      newFileName: newFilename + "." + fileExt
+    });
   };
 
   return (

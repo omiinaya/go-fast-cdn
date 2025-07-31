@@ -1,5 +1,5 @@
 import React from "react";
-import { AuthProvider } from "../contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import Login from "@/modules/auth/Login";
 import Register from "@/modules/auth/Register";
 import UserProfile from "@/modules/auth/UserProfile";

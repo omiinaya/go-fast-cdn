@@ -8,6 +8,8 @@ export const constant = {
       [{ ...constant.queryKeys.all[0], scope: "aaaa", height, width }] as const,
     images: (type: "documents" | "images") =>
       [{ ...constant.queryKeys.all[0], scope: "files", type }] as const,
+    media: (mediaType: string) =>
+      [{ ...constant.queryKeys.all[0], scope: "media", mediaType }] as const,
     users: "users",
     registrationEnabled: "registration-enabled",
     dashboard: "dashboard",

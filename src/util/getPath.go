@@ -19,3 +19,47 @@ func LoadExPath() {
 	exPath := filepath.Dir(ex)
 	ExPath = exPath
 }
+
+// GetUploadsPath returns the path to the uploads directory
+func GetUploadsPath() string {
+	return filepath.Join(ExPath, "uploads")
+}
+
+// GetMediaPath returns the path to the unified media directory
+func GetMediaPath() string {
+	return filepath.Join(ExPath, "uploads", "media")
+}
+
+// GetImagesPath returns the path to the images directory (for backward compatibility)
+func GetImagesPath() string {
+	return filepath.Join(ExPath, "uploads", "images")
+}
+
+// GetDocsPath returns the path to the documents directory (for backward compatibility)
+func GetDocsPath() string {
+	return filepath.Join(ExPath, "uploads", "docs")
+}
+
+// EnsureUploadDirectories ensures that all upload directories exist
+func EnsureUploadDirectories() error {
+	// Create the main uploads directory if it doesn't exist
+	if err := os.MkdirAll(GetUploadsPath(), 0755); err != nil {
+		return err
+	}
+
+	// Create the unified media directory if it doesn't exist
+	if err := os.MkdirAll(GetMediaPath(), 0755); err != nil {
+		return err
+	}
+
+	// Create legacy directories for backward compatibility
+	if err := os.MkdirAll(GetImagesPath(), 0755); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(GetDocsPath(), 0755); err != nil {
+		return err
+	}
+
+	return nil
+}

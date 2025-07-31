@@ -16,7 +16,11 @@ func LoadEnvVariables(prod bool) {
 		os.Setenv("DB_SECRET", "secret")
 	} else {
 		if err := godotenv.Load(); err != nil {
-			log.Fatalf("failed to load environment variables: %s", err.Error())
+			log.Printf("Warning: .env file not found, using default values: %s", err.Error())
+			// Set default PORT for development if not set
+			if os.Getenv("PORT") == "" {
+				os.Setenv("PORT", "8080")
+			}
 		}
 	}
 }

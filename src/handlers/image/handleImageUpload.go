@@ -86,7 +86,8 @@ func (h *ImageHandler) HandleImageUpload(c *gin.Context) {
 		return
 	}
 
-	err = c.SaveUploadedFile(fileHeader, util.ExPath+"/uploads/images/"+savedFilename)
+	// Save the file to the legacy images directory for backward compatibility
+	err = c.SaveUploadedFile(fileHeader, util.GetImagesPath()+"/"+savedFilename)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to save file: %s", err.Error())
 		return

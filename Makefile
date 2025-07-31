@@ -1,5 +1,5 @@
 BINARY_NAME=go-fast-cdn
-OS_NAME := $(shell uname -s | tr A-Z a-z)
+OS_NAME := $(shell uname -s | tr A-Z a-z | sed 's/mingw64_nt.*/windows/')
 ARCH := $(shell uname -m | tr A-Z a-z | sed 's/^aarch/arm/' | sed 's/^x86_64/amd64/')
 
 prep:
@@ -19,18 +19,24 @@ ifeq ($(OS_NAME),darwin)
 else ifeq ($(OS_NAME),linux)
 	CC="x86_64-linux-musl-gcc" GOARCH=${ARCH} GOOS=${OS_NAME} CGO_ENABLED=0 go build -o bin/${BINARY_NAME}-${OS_NAME}
 else ifeq ($(OS_NAME),windows)
-	CC="x86_64-w64-mingw32-gcc" GOARCH=${ARCH} GOOS=windows CGO_ENABLED=0 go build -o bin/${BINARY_NAME}-windows
+	CC="x86_64-w64-mingw32-gcc" GOARCH=${ARCH} GOOS=windows CGO_ENABLED=0 go build -o bin/${BINARY_NAME}-windows.exe
 endif
 
 run: build
-ifeq ($(OS_NAME),)
-	bin/${BINARY_NAME}-windows
+ifeq ($(OS_NAME),windows)
+	bin/${BINARY_NAME}-windows.exe
+else ifeq ($(OS_NAME),)
+	bin/${BINARY_NAME}-windows.exe
 else
 	bin/${BINARY_NAME}-${OS_NAME}
 endif
 
 dev:
+ifeq ($(OS_NAME),windows)
+	air -c .air.toml.windows
+else
 	air
+endif
 
 clean: 
 	go clean

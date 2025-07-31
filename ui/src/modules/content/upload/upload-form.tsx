@@ -5,15 +5,18 @@ import ImageCardUpload from "./image-card-upload";
 import FileInput from "./file-input";
 import toast from "react-hot-toast";
 import DocCardUpload from "./doc-card-upload";
+import MediaCardUpload from "./media-card-upload";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MediaType } from "@/types/media";
 
 interface UploadProps {
   files: File[];
   onChangeFiles: (files: File[]) => void;
   isLoading: boolean;
-  tab: "documents" | "images";
-  onChangeTab: (tab: "documents" | "images") => void;
+  tab: MediaType;
+  onChangeTab: (tab: MediaType) => void;
   disableTabSwitching?: boolean;
+  useUnifiedMedia?: boolean; // Flag to enable unified media handling
 }
 
 const UploadForm = ({
@@ -23,6 +26,7 @@ const UploadForm = ({
   onChangeTab,
   tab,
   disableTabSwitching = false,
+  useUnifiedMedia = false,
 }: UploadProps) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -57,6 +61,51 @@ const UploadForm = ({
     setIsDragOver(false);
   }, []);
 
+  const getAcceptedTypes = (type: MediaType): string[] => {
+    switch (type) {
+      case "image":
+        return [
+          "image/jpeg",
+          "image/png",
+          "image/jpg",
+          "image/webp",
+          "image/gif",
+          "image/bmp",
+          "image/svg+xml",
+        ];
+      case "document":
+        return [
+          "text/plain",
+          "application/zip",
+          "application/msword",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "application/pdf",
+          "application/rtf",
+          "application/x-freearc",
+        ];
+      case "video":
+        return [
+          "video/mp4",
+          "video/webm",
+          "video/ogg",
+          "video/quicktime",
+          "video/x-msvideo",
+        ];
+      case "audio":
+        return [
+          "audio/mpeg",
+          "audio/ogg",
+          "audio/wav",
+          "audio/webm",
+          "audio/aac",
+        ];
+      default:
+        return [];
+    }
+  };
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -66,40 +115,18 @@ const UploadForm = ({
       if (isLoading) return;
 
       const droppedFiles = Array.from(e.dataTransfer.files);
-
-      // check if the dropped files match the current tab
-      const acceptedTypes =
-        tab === "documents"
-          ? [
-              "text/plain",
-              "application/zip",
-              "application/msword",
-              "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-              "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-              "application/pdf",
-              "application/rtf",
-              "application/x-freearc",
-            ]
-          : [
-              "image/jpeg",
-              "image/png",
-              "image/jpg",
-              "image/webp",
-              "image/gif",
-              "image/bmp",
-            ];
+      const acceptedTypes = getAcceptedTypes(tab);
       const isValidFiles = droppedFiles.every((file) =>
         acceptedTypes.includes(file.type)
       );
+      
       if (!isValidFiles) {
         toast.error(
-          `Invalid file type. Please upload ${
-            tab === "documents" ? "documents" : "images"
-          } only.`
+          `Invalid file type. Please upload ${tab} files only.`
         );
         return;
       }
+      
       if (droppedFiles.length === 0) return;
       onChangeFiles([...files, ...droppedFiles]);
     },
@@ -111,6 +138,31 @@ const UploadForm = ({
       fileRef.current.click();
     }
   }, [files.length, isLoading]);
+
+  const getAcceptAttribute = (type: MediaType): string => {
+    switch (type) {
+      case "image":
+        return "image/jpeg,image/png,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml";
+      case "document":
+        return "text/plain,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,application/rtf,application/x-freearc";
+      case "video":
+        return "video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo";
+      case "audio":
+        return "audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/aac";
+      default:
+        return "*/*";
+    }
+  };
+
+  const getMediaTypeName = (type: MediaType): string => {
+    switch (type) {
+      case "image": return "images";
+      case "document": return "documents";
+      case "video": return "videos";
+      case "audio": return "audio files";
+      default: return "files";
+    }
+  };
 
   return (
     <div
@@ -131,26 +183,39 @@ const UploadForm = ({
     >
       {files.length > 0 ? (
         <div className="flex gap-2 flex-wrap p-2 overflow-y-auto max-h-80">
-          {tab === "documents" ? (
-            <>
-              {files.map((file, index) => (
-                <DocCardUpload
-                  key={file.name + index}
-                  fileName={sanitizeFileName(file).name}
-                  onClickDelete={() => handleDeleteFile(index)}
-                />
-              ))}
-            </>
+          {useUnifiedMedia ? (
+            // Use unified media card for all media types
+            files.map((file, index) => (
+              <MediaCardUpload
+                key={file.name + index}
+                media={file}
+                fileName={sanitizeFileName(file).name}
+                mediaType={tab}
+                onClickDelete={() => handleDeleteFile(index)}
+              />
+            ))
           ) : (
+            // Use legacy components for backward compatibility
             <>
-              {files.map((file, index) => (
-                <ImageCardUpload
-                  key={file.name + index}
-                  fileName={sanitizeFileName(file).name}
-                  onClickDelete={() => handleDeleteFile(index)}
-                  imageUrl={URL.createObjectURL(file)}
-                />
-              ))}
+              {tab === "document" ? (
+                files.map((file, index) => (
+                  <DocCardUpload
+                    key={file.name + index}
+                    media={file}
+                    fileName={sanitizeFileName(file).name}
+                    onClickDelete={() => handleDeleteFile(index)}
+                  />
+                ))
+              ) : (
+                files.map((file, index) => (
+                  <ImageCardUpload
+                    key={file.name + index}
+                    media={file}
+                    fileName={sanitizeFileName(file).name}
+                    onClickDelete={() => handleDeleteFile(index)}
+                  />
+                ))
+              )}
             </>
           )}
         </div>
@@ -168,21 +233,15 @@ const UploadForm = ({
               ) : (
                 <div className="text-center">
                   <p className="text-gray-500 text-center">
-                    {tab === "documents"
-                      ? "Drop your documents here, or click to select files."
-                      : "Drop your images here, or click to select files."}
+                    Drop your {getMediaTypeName(tab)} here, or click to select files.
                   </p>
                   <input
                     type="file"
-                    accept={
-                      tab === "documents"
-                        ? "text/plain,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,application/rtf,application/x-freearc"
-                        : "image/jpeg,image/png,image/jpg,image/webp,image/gif,image/bmp"
-                    }
+                    accept={getAcceptAttribute(tab)}
                     multiple
                     name={tab}
                     id={tab}
-                    aria-label={`Select ${tab}`}
+                    aria-label={`Select ${getMediaTypeName(tab)}`}
                     ref={fileRef}
                     className="hidden"
                     onChange={handleOnChangeFiles}
@@ -194,7 +253,7 @@ const UploadForm = ({
             // When tab switching is enabled, show tabs with content
             <Tabs
               onValueChange={(value) => {
-                onChangeTab(value as "documents" | "images");
+                onChangeTab(value as MediaType);
               }}
               value={tab}
             >
@@ -202,8 +261,14 @@ const UploadForm = ({
                 className="self-center mb-4"
                 onClick={(e) => e.stopPropagation()}
               >
-                <TabsTrigger value="documents">Documents</TabsTrigger>
-                <TabsTrigger value="images">Images</TabsTrigger>
+                <TabsTrigger value="document">Documents</TabsTrigger>
+                <TabsTrigger value="image">Images</TabsTrigger>
+                {useUnifiedMedia && (
+                  <>
+                    <TabsTrigger value="video">Videos</TabsTrigger>
+                    <TabsTrigger value="audio">Audio</TabsTrigger>
+                  </>
+                )}
               </TabsList>
 
               {isDragOver ? (
@@ -215,15 +280,29 @@ const UploadForm = ({
               ) : (
                 <>
                   <FileInput
-                    type="documents"
+                    type="document"
                     fileRef={fileRef}
                     onFileChange={handleOnChangeFiles}
                   />
                   <FileInput
-                    type="images"
+                    type="image"
                     fileRef={fileRef}
                     onFileChange={handleOnChangeFiles}
                   />
+                  {useUnifiedMedia && (
+                    <>
+                      <FileInput
+                        type="video"
+                        fileRef={fileRef}
+                        onFileChange={handleOnChangeFiles}
+                      />
+                      <FileInput
+                        type="audio"
+                        fileRef={fileRef}
+                        onFileChange={handleOnChangeFiles}
+                      />
+                    </>
+                  )}
                 </>
               )}
             </Tabs>

@@ -83,7 +83,8 @@ func (h *DocHandler) HandleDocUpload(c *gin.Context) {
 		return
 	}
 
-	err = c.SaveUploadedFile(fileHeader, util.ExPath+"/uploads/docs/"+savedFileName)
+	// Save the file to the legacy docs directory for backward compatibility
+	err = c.SaveUploadedFile(fileHeader, util.GetDocsPath()+"/"+savedFileName)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to save file: %s", err.Error())
 		return

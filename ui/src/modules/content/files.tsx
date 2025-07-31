@@ -186,7 +186,7 @@ const Files: React.FC<TFilesProps> = ({ type }) => {
                   <List />
                   Select
                 </Button>
-                <UploadModal placement="header" type={type} />
+                <UploadModal placement="header" type={type === "images" ? "image" : "document"} />
               </>
             )}
           </section>
