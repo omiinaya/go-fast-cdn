@@ -1,12 +1,14 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kevinanielsen/go-fast-cdn/src/database"
 	"github.com/kevinanielsen/go-fast-cdn/src/handlers"
 	authHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/auth"
+	configHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/config"
 	dbHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/db"
 	dHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/docs"
 	iHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/image"
@@ -16,9 +18,16 @@ import (
 )
 
 func (s *Server) AddApiRoutes() {
+	fmt.Println("[DEBUG] AddApiRoutes called")
 	api := s.Engine.Group("/api")
 	api.GET("/", func(c *gin.Context) {
 		c.JSON(http.StatusOK, "pong")
+	})
+
+	// Add a test endpoint at the API level
+	api.GET("/test", func(c *gin.Context) {
+		fmt.Println("[DEBUG] API test endpoint called")
+		c.JSON(200, gin.H{"message": "API test endpoint works"})
 	})
 
 	// Authentication routes (public)
@@ -136,4 +145,55 @@ func (s *Server) AddApiRoutes() {
 	// Public config endpoint for registration status
 	configHandler := handlers.NewConfigHandler(database.NewConfigRepo(database.DB))
 	api.GET("/config/registration", configHandler.GetRegistrationEnabled)
+
+	// File type configuration endpoints (public)
+	fileTypeHandler := configHandlers.NewFileTypeHandler()
+	fmt.Println("[DEBUG] Registering config endpoints")
+	api.GET("/config/test", func(c *gin.Context) {
+		fmt.Println("[DEBUG] Config test endpoint called")
+		c.JSON(200, gin.H{"message": "Config test endpoint works"})
+	})
+	api.GET("/config/simple", func(c *gin.Context) {
+		fmt.Println("[DEBUG] Config simple endpoint called")
+		c.JSON(200, gin.H{"message": "Simple config endpoint works"})
+	})
+
+	// Add a debug endpoint to check if routes are working
+	api.GET("/debug/routes", func(c *gin.Context) {
+		routes := s.Engine.Routes()
+		var routeList []string
+		for _, route := range routes {
+			routeList = append(routeList, fmt.Sprintf("%s %s", route.Method, route.Path))
+		}
+		c.JSON(200, gin.H{"routes": routeList})
+	})
+
+	// Test the fileTypeHandler directly
+	fmt.Println("[DEBUG] Testing fileTypeHandler")
+	if fileTypeHandler == nil {
+		fmt.Println("[DEBUG] fileTypeHandler is nil")
+	} else {
+		fmt.Println("[DEBUG] fileTypeHandler is not nil")
+	}
+
+	// Test the fileTypeHandler directly with a simple endpoint
+	api.GET("/config/file-types-direct", func(c *gin.Context) {
+		fmt.Println("[DEBUG] Config file-types-direct endpoint called")
+		if fileTypeHandler.GetFileTypeConfig == nil {
+			fmt.Println("[DEBUG] fileTypeHandler.GetFileTypeConfig is nil")
+			c.JSON(500, gin.H{"error": "fileTypeHandler.GetFileTypeConfig is nil"})
+			return
+		}
+		fmt.Println("[DEBUG] fileTypeHandler.GetFileTypeConfig is not nil")
+		fileTypeHandler.GetFileTypeConfig(c)
+	})
+
+	api.GET("/config/file-types", fileTypeHandler.GetFileTypeConfig)
+	api.GET("/config/file-types/extensions", fileTypeHandler.GetSupportedFileTypes)
+	api.GET("/config/file-types/mime-types", fileTypeHandler.GetSupportedMimeTypes)
+	fmt.Println("[DEBUG] Config endpoints registered")
+	fmt.Println("[DEBUG] All registered routes:")
+	for _, route := range s.Engine.Routes() {
+		fmt.Printf("[DEBUG] Route: %s %s\n", route.Method, route.Path)
+	}
 }

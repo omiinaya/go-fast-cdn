@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+
+	"github.com/kevinanielsen/go-fast-cdn/src/config"
 )
 
 // MediaType defines the type of media stored
@@ -18,6 +20,9 @@ const (
 	MediaTypeVideo    MediaType = "video"
 	MediaTypeAudio    MediaType = "audio"
 )
+
+// Global file type configuration instance
+var fileTypeConfig = config.GetDefaultFileTypeConfig()
 
 // MediaTypeInfo contains information about a media type
 type MediaTypeInfo struct {
@@ -33,76 +38,26 @@ func GetMediaTypes() map[MediaType]MediaTypeInfo {
 		MediaTypeImage: {
 			Type:        MediaTypeImage,
 			DisplayName: "Image",
-			Extensions:  []string{".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff", ".svg"},
-			MimeTypes: []string{
-				"image/jpeg",
-				"image/jpg",
-				"image/png",
-				"image/gif",
-				"image/webp",
-				"image/bmp",
-				"image/tiff",
-				"image/svg+xml",
-			},
+			Extensions:  fileTypeConfig.GetExtensionsByCategory(config.MediaTypeImage),
+			MimeTypes:   fileTypeConfig.GetMimeTypesByCategory(config.MediaTypeImage),
 		},
 		MediaTypeDocument: {
 			Type:        MediaTypeDocument,
 			DisplayName: "Document",
-			Extensions:  []string{".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".rtf", ".odt", ".ods", ".odp", ".zip", ".rar", ".7z", ".csv", ".json", ".xml", ".html", ".htm", ".css", ".js", ".md"},
-			MimeTypes: []string{
-				"text/plain",
-				"text/plain; charset=utf-8",
-				"text/csv",
-				"application/json",
-				"application/xml",
-				"text/html",
-				"text/css",
-				"application/javascript",
-				"text/markdown",
-				"application/pdf",
-				"application/msword",
-				"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-				"application/vnd.ms-excel",
-				"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-				"application/vnd.ms-powerpoint",
-				"application/vnd.openxmlformats-officedocument.presentationml.presentation",
-				"application/rtf",
-				"application/vnd.oasis.opendocument.text",
-				"application/vnd.oasis.opendocument.spreadsheet",
-				"application/vnd.oasis.opendocument.presentation",
-				"application/zip",
-				"application/x-rar-compressed",
-				"application/x-7z-compressed",
-			},
+			Extensions:  fileTypeConfig.GetExtensionsByCategory(config.MediaTypeDocument),
+			MimeTypes:   fileTypeConfig.GetMimeTypesByCategory(config.MediaTypeDocument),
 		},
 		MediaTypeVideo: {
 			Type:        MediaTypeVideo,
 			DisplayName: "Video",
-			Extensions:  []string{".mp4", ".avi", ".mov", ".wmv", ".flv", ".webm", ".mkv", ".m4v"},
-			MimeTypes: []string{
-				"video/mp4",
-				"video/x-msvideo",
-				"video/quicktime",
-				"video/x-ms-wmv",
-				"video/x-flv",
-				"video/webm",
-				"video/x-matroska",
-				"video/x-m4v",
-			},
+			Extensions:  fileTypeConfig.GetExtensionsByCategory(config.MediaTypeVideo),
+			MimeTypes:   fileTypeConfig.GetMimeTypesByCategory(config.MediaTypeVideo),
 		},
 		MediaTypeAudio: {
 			Type:        MediaTypeAudio,
 			DisplayName: "Audio",
-			Extensions:  []string{".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a", ".wma"},
-			MimeTypes: []string{
-				"audio/mpeg",
-				"audio/wav",
-				"audio/ogg",
-				"audio/flac",
-				"audio/aac",
-				"audio/mp4",
-				"audio/x-ms-wma",
-			},
+			Extensions:  fileTypeConfig.GetExtensionsByCategory(config.MediaTypeAudio),
+			MimeTypes:   fileTypeConfig.GetMimeTypesByCategory(config.MediaTypeAudio),
 		},
 	}
 }
@@ -218,22 +173,27 @@ func GetMIMETypeFromExtension(extension string) (string, error) {
 		ext = "." + ext
 	}
 
-	// Try to get MIME type from the system
-	mimeType := mime.TypeByExtension(ext)
-	if mimeType != "" {
-		return mimeType, nil
-	}
+	fmt.Printf("[DEBUG] GetMIMETypeFromExtension called with extension: %s (normalized: %s)\n", extension, ext)
 
-	// If system doesn't recognize it, check our custom mappings
-	mediaTypes := GetMediaTypes()
-	for _, info := range mediaTypes {
-		for i, validExt := range info.Extensions {
-			if ext == validExt && i < len(info.MimeTypes) {
-				return info.MimeTypes[i], nil
-			}
+	// First, check our custom mappings for more accurate MIME type detection
+	fileInfo, err := fileTypeConfig.GetFileTypeInfo(ext)
+	if err == nil {
+		// Return the first (primary) MIME type for this extension
+		if len(fileInfo.MimeTypes) > 0 {
+			mimeType := fileInfo.MimeTypes[0]
+			fmt.Printf("[DEBUG] Custom mapping found: %s -> %s\n", ext, mimeType)
+			return mimeType, nil
 		}
 	}
 
+	// If no custom mapping found, try to get MIME type from the system
+	mimeType := mime.TypeByExtension(ext)
+	if mimeType != "" {
+		fmt.Printf("[DEBUG] System detected MIME type: %s for extension: %s\n", mimeType, ext)
+		return mimeType, nil
+	}
+
+	fmt.Printf("[DEBUG] No MIME type found for extension: %s\n", ext)
 	return "", errors.New("unsupported file extension: " + extension)
 }
 

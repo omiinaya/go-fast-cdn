@@ -49,14 +49,34 @@ const UploadMediaModal = ({
     
     const documentTypes = [
       "text/plain",
+      "text/plain; charset=utf-8",
+      "text/csv",
+      "application/json",
+      "application/xml",
+      "text/html",
+      "text/css",
+      "application/javascript",
+      "text/markdown",
       "application/zip",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-powerpoint",
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "application/pdf",
       "application/rtf",
-      "application/x-freearc",
+      "application/vnd.oasis.opendocument.text",
+      "application/vnd.oasis.opendocument.spreadsheet",
+      "application/vnd.oasis.opendocument.presentation",
+      "application/pdf",
+      "application/x-rar-compressed",
+      "application/x-7z-compressed",
+      "application/x-tar",
+      "application/gzip",
+      "application/x-gzip",
+      "application/x-bzip2",
+      "application/x-xz",
+      "application/octet-stream",
     ];
     
     const videoTypes = [
@@ -164,7 +184,7 @@ const UploadMediaModal = ({
   const getMediaDescription = (type: MediaType): string => {
     switch (type) {
       case "image": return "Upload images (JPEG, PNG, GIF, etc.)";
-      case "document": return "Upload documents (PDF, DOC, TXT, etc.)";
+      case "document": return "Upload documents (PDF, DOC, TXT, JS, CSS, JSON, YAML, etc.)";
       case "video": return "Upload videos (MP4, WebM, etc.)";
       case "audio": return "Upload audio files (MP3, WAV, etc.)";
       default: return "Upload files";

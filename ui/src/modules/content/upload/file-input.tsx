@@ -1,6 +1,7 @@
 import { TabsContent } from "@/components/ui/tabs";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { MediaType } from "@/types/media";
+import { fileTypeService } from "@/services/fileTypeService";
 
 interface FileInputProps {
   type: MediaType;
@@ -9,13 +10,24 @@ interface FileInputProps {
 }
 
 const FileInput = ({ type, fileRef, onFileChange }: FileInputProps) => {
-  const ACCEPT_TYPES = {
-    image: "image/jpeg,image/png,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml",
-    document: "text/plain,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,application/rtf,application/x-freearc",
-    video: "video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo",
-    audio: "audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/aac",
-    other: "*/*",
-  } as const;
+  const [acceptType, setAcceptType] = useState<string>("*/*");
+  const [fileTypesLoaded, setFileTypesLoaded] = useState(false);
+
+  // Load file type configuration on component mount
+  useEffect(() => {
+    const loadFileTypes = async () => {
+      try {
+        await fileTypeService.loadConfig();
+        setFileTypesLoaded(true);
+        setAcceptType(fileTypeService.getAcceptAttribute(type));
+      } catch (err) {
+        console.error('Failed to load file type configuration:', err);
+        // Keep default accept type on error
+      }
+    };
+
+    loadFileTypes();
+  }, [type]);
 
   const UPLOAD_MESSAGES = {
     image: "Drop your images here, or click to select files.",
@@ -37,10 +49,13 @@ const FileInput = ({ type, fileRef, onFileChange }: FileInputProps) => {
 
   return (
     <TabsContent value={type}>
-      <p className="text-gray-500 text-center">{UPLOAD_MESSAGES[type]}</p>
+      <p className="text-gray-500 text-center">
+        {UPLOAD_MESSAGES[type]}
+        {!fileTypesLoaded && <span className="text-xs text-gray-400 ml-2">Loading file types...</span>}
+      </p>
       <input
         type="file"
-        accept={ACCEPT_TYPES[type]}
+        accept={acceptType}
         multiple
         name={type}
         id={type}
@@ -48,6 +63,7 @@ const FileInput = ({ type, fileRef, onFileChange }: FileInputProps) => {
         ref={fileRef}
         className="hidden"
         onChange={onFileChange}
+        disabled={!fileTypesLoaded}
       />
     </TabsContent>
   );

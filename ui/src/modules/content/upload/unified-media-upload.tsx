@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import MediaCardUpload from "./media-card-upload";
 import toast from "react-hot-toast";
 import { MediaType, Media } from "@/types/media";
 import { useDropzone } from "react-dropzone";
+import { fileTypeService } from "@/services/fileTypeService";
 
 interface UnifiedMediaUploadProps {
   files: File[];
@@ -32,65 +33,39 @@ const UnifiedMediaUpload = ({
 }: UnifiedMediaUploadProps) => {
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileTypesLoaded, setFileTypesLoaded] = useState(false);
+
+  // Load file type configuration on component mount
+  useEffect(() => {
+    const loadFileTypes = async () => {
+      try {
+        await fileTypeService.loadConfig();
+        setFileTypesLoaded(true);
+      } catch (err) {
+        console.error('Failed to load file type configuration:', err);
+        toast.error('Failed to load file type configuration');
+      }
+    };
+
+    loadFileTypes();
+  }, []);
 
   const getAcceptedTypes = (type: MediaType): string[] => {
-    switch (type) {
-      case "image":
-        return [
-          "image/jpeg",
-          "image/png",
-          "image/jpg",
-          "image/webp",
-          "image/gif",
-          "image/bmp",
-          "image/svg+xml",
-        ];
-      case "document":
-        return [
-          "text/plain",
-          "application/zip",
-          "application/msword",
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-          "application/pdf",
-          "application/rtf",
-          "application/x-freearc",
-        ];
-      case "video":
-        return [
-          "video/mp4",
-          "video/webm",
-          "video/ogg",
-          "video/quicktime",
-          "video/x-msvideo",
-        ];
-      case "audio":
-        return [
-          "audio/mpeg",
-          "audio/ogg",
-          "audio/wav",
-          "audio/webm",
-          "audio/aac",
-        ];
-      default:
-        return [];
+    if (!fileTypesLoaded) {
+      // Fallback to basic types while loading
+      return ["*/*"];
     }
+    
+    return fileTypeService.getSupportedMimeTypes(type);
   };
 
   const getAcceptAttribute = (type: MediaType): string => {
-    switch (type) {
-      case "image":
-        return "image/jpeg,image/png,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml";
-      case "document":
-        return "text/plain,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/pdf,application/rtf,application/x-freare";
-      case "video":
-        return "video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo";
-      case "audio":
-        return "audio/mpeg,audio/ogg,audio/wav,audio/webm,audio/aac";
-      default:
-        return "*/*";
+    if (!fileTypesLoaded) {
+      // Fallback to basic types while loading
+      return "*/*";
     }
+    
+    return fileTypeService.getAcceptAttribute(type);
   };
 
   const validateFiles = (newFiles: File[], currentFileCount: number, maxSize: number, maxCount: number): string | null => {
@@ -186,10 +161,10 @@ const UnifiedMediaUpload = ({
   const { getRootProps, getInputProps } = useDropzone({
     onDrop,
     onDropRejected,
-    accept: mediaType ? { [mediaType]: getAcceptedTypes(mediaType) } : undefined,
+    accept: mediaType && fileTypesLoaded ? { [mediaType]: getAcceptedTypes(mediaType) } : undefined,
     maxSize: maxFileSize,
     maxFiles: maxFiles - files.length,
-    disabled: isLoading,
+    disabled: isLoading || !fileTypesLoaded,
     noClick: files.length > 0,
   });
 
@@ -268,6 +243,7 @@ const UnifiedMediaUpload = ({
               </p>
               <p className="text-xs text-gray-400">
                 Max file size: {Math.round(maxFileSize / (1024 * 1024))}MB | Max files: {maxFiles}
+                {!fileTypesLoaded && <span> | Loading file types...</span>}
               </p>
             </div>
           </div>

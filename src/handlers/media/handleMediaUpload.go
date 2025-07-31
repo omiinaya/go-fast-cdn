@@ -68,34 +68,16 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 	ext := filepath.Ext(fileHeader.Filename)
 	fmt.Printf("File extension: %s\n", ext)
 
-	// Fallback mechanism: if detected as application/octet-stream, try to determine from extension
-	if fileType == "application/octet-stream" {
-		fmt.Printf("File detected as application/octet-stream, trying fallback detection from extension\n")
-		switch ext {
-		case ".txt":
-			fileType = "text/plain"
-			fmt.Printf("Fallback: setting file type to text/plain based on .txt extension\n")
-		case ".csv":
-			fileType = "text/csv"
-			fmt.Printf("Fallback: setting file type to text/csv based on .csv extension\n")
-		case ".json":
-			fileType = "application/json"
-			fmt.Printf("Fallback: setting file type to application/json based on .json extension\n")
-		case ".xml":
-			fileType = "application/xml"
-			fmt.Printf("Fallback: setting file type to application/xml based on .xml extension\n")
-		case ".html", ".htm":
-			fileType = "text/html"
-			fmt.Printf("Fallback: setting file type to text/html based on %s extension\n", ext)
-		case ".css":
-			fileType = "text/css"
-			fmt.Printf("Fallback: setting file type to text/css based on .css extension\n")
-		case ".js":
-			fileType = "application/javascript"
-			fmt.Printf("Fallback: setting file type to application/javascript based on .js extension\n")
-		case ".md":
-			fileType = "text/markdown"
-			fmt.Printf("Fallback: setting file type to text/markdown based on .md extension\n")
+	// Enhanced fallback mechanism: if detected as application/octet-stream or unknown, try to determine from extension
+	if fileType == "application/octet-stream" || !util.IsSupportedMIMEType(fileType) {
+		fmt.Printf("File detected as %s, trying fallback detection from extension: %s\n", fileType, ext)
+
+		// Try to get MIME type from extension using our utility function
+		if mimeTypeFromExt, err := util.GetMIMETypeFromExtension(ext); err == nil {
+			fileType = mimeTypeFromExt
+			fmt.Printf("Fallback: setting file type to %s based on %s extension\n", fileType, ext)
+		} else {
+			fmt.Printf("Warning: Could not determine MIME type from extension %s: %v\n", ext, err)
 		}
 		fmt.Printf("Final file type after fallback: %s\n", fileType)
 	}
@@ -169,7 +151,7 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 		Type:     mediaType,
 	}
 
-	// For images, try to extract dimensions
+	// For images, try to extract dimensions (non-critical operation)
 	if mediaType == models.MediaTypeImage {
 		fmt.Printf("[DEBUG] Attempting to extract image dimensions\n")
 		width, height, err := h.getImageDimensions(fileHeader)
@@ -178,22 +160,24 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 			media.Height = &height
 			fmt.Printf("[DEBUG] Image dimensions extracted: %dx%d\n", width, height)
 		} else {
-			fmt.Printf("[DEBUG] Failed to extract image dimensions: %v\n", err)
+			fmt.Printf("[DEBUG] Failed to extract image dimensions (non-critical): %v\n", err)
+			// Don't fail the upload if dimension extraction fails
 		}
 	}
 
-	// Check if file already exists
+	// Check if file already exists by checksum (content-based duplicate detection)
 	fmt.Printf("Checking if file exists in database with hash: %x\n", fileHashBuffer)
 	mediaInDatabase := h.repo.GetMediaByCheckSum(fileHashBuffer[:])
 	fmt.Printf("Database query result - Checksum length: %d, FileName: %s\n", len(mediaInDatabase.Checksum), mediaInDatabase.FileName)
 	if len(mediaInDatabase.Checksum) > 0 {
-		fmt.Printf("File already exists in database: %s\n", mediaInDatabase.FileName)
+		fmt.Printf("File with same content already exists in database: %s\n", mediaInDatabase.FileName)
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "File already exists",
+			"error":         "File with this content already exists",
+			"existing_file": mediaInDatabase.FileName,
 		})
 		return
 	}
-	fmt.Printf("File not found in database, proceeding with upload\n")
+	fmt.Printf("File content not found in database, proceeding with upload\n")
 
 	// Save to database
 	fmt.Printf("[DEBUG] Saving media to database: %+v\n", media)
@@ -229,6 +213,9 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 	body := gin.H{
 		"file_url": c.Request.Host + util.GetMediaURLPath(savedFilename),
 		"type":     mediaType,
+		"filename": savedFilename,
+		"checksum": fmt.Sprintf("%x", fileHashBuffer),
+		"note":     "Duplicate detection is based on file content (checksum), not filename",
 	}
 
 	c.JSON(http.StatusOK, body)
@@ -302,8 +289,23 @@ func (h *MediaHandler) HandleImageUpload(c *gin.Context) {
 		return
 	}
 
-	// Calculate file hash
-	fileHashBuffer := md5.Sum(fileBuffer)
+	// Calculate file hash from the entire file content
+	// Reset file position and read the entire file
+	if _, err := file.Seek(0, 0); err != nil {
+		c.String(http.StatusInternalServerError, "Failed to reset file position: %s", err.Error())
+		return
+	}
+
+	// Read the entire file for hash calculation
+	fullFileContent, err := io.ReadAll(file)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to read full file content: %s", err.Error())
+		return
+	}
+
+	fileHashBuffer := md5.Sum(fullFileContent)
+	fmt.Printf("Calculated file hash from full content: %x\n", fileHashBuffer)
+	fmt.Printf("Full file size: %d bytes\n", len(fullFileContent))
 
 	// Determine the filename
 	var filename string
@@ -334,11 +336,12 @@ func (h *MediaHandler) HandleImageUpload(c *gin.Context) {
 		media.Height = &height
 	}
 
-	// Check if file already exists
+	// Check if file already exists by checksum (content-based duplicate detection)
 	mediaInDatabase := h.repo.GetImageByCheckSum(fileHashBuffer[:])
 	if len(mediaInDatabase.Checksum) > 0 {
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "File already exists",
+			"error":         "File with this content already exists",
+			"existing_file": mediaInDatabase.FileName,
 		})
 		return
 	}
@@ -360,6 +363,10 @@ func (h *MediaHandler) HandleImageUpload(c *gin.Context) {
 	// Return success response
 	body := gin.H{
 		"file_url": c.Request.Host + "/download/images/" + savedFilename,
+		"type":     models.MediaTypeImage,
+		"filename": savedFilename,
+		"checksum": fmt.Sprintf("%x", fileHashBuffer),
+		"note":     "Duplicate detection is based on file content (checksum), not filename",
 	}
 
 	c.JSON(http.StatusOK, body)
@@ -415,8 +422,23 @@ func (h *MediaHandler) HandleDocUpload(c *gin.Context) {
 		return
 	}
 
-	// Calculate file hash
-	fileHashBuffer := md5.Sum(fileBuffer)
+	// Calculate file hash from the entire file content
+	// Reset file position and read the entire file
+	if _, err := file.Seek(0, 0); err != nil {
+		c.String(http.StatusInternalServerError, "Failed to reset file position: %s", err.Error())
+		return
+	}
+
+	// Read the entire file for hash calculation
+	fullFileContent, err := io.ReadAll(file)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to read full file content: %s", err.Error())
+		return
+	}
+
+	fileHashBuffer := md5.Sum(fullFileContent)
+	fmt.Printf("Calculated file hash from full content: %x\n", fileHashBuffer)
+	fmt.Printf("Full file size: %d bytes\n", len(fullFileContent))
 
 	// Determine the filename
 	var filename string
@@ -440,10 +462,13 @@ func (h *MediaHandler) HandleDocUpload(c *gin.Context) {
 		Type:     models.MediaTypeDocument,
 	}
 
-	// Check if file already exists
+	// Check if file already exists by checksum (content-based duplicate detection)
 	mediaInDatabase := h.repo.GetDocByCheckSum(fileHashBuffer[:])
 	if len(mediaInDatabase.Checksum) > 0 {
-		c.JSON(http.StatusConflict, gin.H{"error": "File already exists"})
+		c.JSON(http.StatusConflict, gin.H{
+			"error":         "File with this content already exists",
+			"existing_file": mediaInDatabase.FileName,
+		})
 		return
 	}
 
@@ -464,6 +489,10 @@ func (h *MediaHandler) HandleDocUpload(c *gin.Context) {
 	// Return success response
 	body := gin.H{
 		"file_url": c.Request.Host + "/download/docs/" + savedFileName,
+		"type":     models.MediaTypeDocument,
+		"filename": savedFileName,
+		"checksum": fmt.Sprintf("%x", fileHashBuffer),
+		"note":     "Duplicate detection is based on file content (checksum), not filename",
 	}
 
 	c.JSON(http.StatusOK, body)

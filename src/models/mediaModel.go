@@ -16,7 +16,7 @@ const (
 type Media struct {
 	gorm.Model
 
-	FileName string    `json:"fileName" gorm:"uniqueIndex;column:file_name"`
+	FileName string    `json:"fileName" gorm:"column:file_name"`
 	Checksum []byte    `json:"checksum"`
 	Type     MediaType `json:"mediaType" gorm:"type:varchar(20);not null;default:'document';column:type"`
 

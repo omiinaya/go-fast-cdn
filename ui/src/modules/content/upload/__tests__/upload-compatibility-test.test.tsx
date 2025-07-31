@@ -6,7 +6,7 @@ import { Media, MediaType } from '@/types/media';
 import toast from 'react-hot-toast';
 
 // Mock the hooks
-jest.mock('../hooks/use-upload-file-mutation', () => ({
+jest.mock('../../hooks/use-upload-file-mutation', () => ({
   __esModule: true,
   default: jest.fn(() => ({
     mutate: jest.fn(),
@@ -14,7 +14,7 @@ jest.mock('../hooks/use-upload-file-mutation', () => ({
   })),
 }));
 
-jest.mock('../hooks/use-upload-media-mutation', () => ({
+jest.mock('../../hooks/use-upload-media-mutation', () => ({
   __esModule: true,
   default: jest.fn(() => ({
     mutate: jest.fn(),
@@ -22,7 +22,7 @@ jest.mock('../hooks/use-upload-media-mutation', () => ({
   })),
 }));
 
-jest.mock('../hooks/use-upload-unified-media-mutation', () => ({
+jest.mock('../../hooks/use-upload-unified-media-mutation', () => ({
   __esModule: true,
   default: jest.fn(() => ({
     mutate: jest.fn(),
@@ -161,7 +161,7 @@ describe('UploadCompatibilityTest', () => {
   describe('Backward Compatibility', () => {
     it('should handle legacy image upload', async () => {
       const mockUploadFile = jest.fn();
-      (require('../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadFile,
         isLoading: false,
       });
@@ -184,7 +184,7 @@ describe('UploadCompatibilityTest', () => {
 
     it('should handle legacy document upload', async () => {
       const mockUploadFile = jest.fn();
-      (require('../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadFile,
         isLoading: false,
       });
@@ -207,7 +207,7 @@ describe('UploadCompatibilityTest', () => {
 
     it('should handle unified media upload for images', async () => {
       const mockUploadMedia = jest.fn();
-      (require('../hooks/use-upload-media-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-media-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadMedia,
         isLoading: false,
       });
@@ -230,7 +230,7 @@ describe('UploadCompatibilityTest', () => {
 
     it('should handle unified media upload for documents', async () => {
       const mockUploadMedia = jest.fn();
-      (require('../hooks/use-upload-media-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-media-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadMedia,
         isLoading: false,
       });
@@ -253,7 +253,7 @@ describe('UploadCompatibilityTest', () => {
 
     it('should handle unified media upload using unified hook for images', async () => {
       const mockUploadUnifiedMedia = jest.fn();
-      (require('../hooks/use-upload-unified-media-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-unified-media-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadUnifiedMedia,
         isLoading: false,
       });
@@ -276,7 +276,7 @@ describe('UploadCompatibilityTest', () => {
 
     it('should handle unified media upload using unified hook for documents', async () => {
       const mockUploadUnifiedMedia = jest.fn();
-      (require('../hooks/use-upload-unified-media-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-unified-media-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadUnifiedMedia,
         isLoading: false,
       });
@@ -298,20 +298,48 @@ describe('UploadCompatibilityTest', () => {
     });
   });
 
-  describe('File Type Validation', () => {
-    it('should accept image files for image upload', () => {
-      render(<UploadCompatibilityTest />, { wrapper });
-      
-      const imageFileInput = screen.getAllByTestId('file-input')[0];
-      expect(imageFileInput).toHaveAttribute('accept', 'image/*');
-    });
+describe('File Type Validation', () => {
+it('should accept image files for image upload', () => {
+  render(<UploadCompatibilityTest />, { wrapper });
+  
+  const imageFileInput = screen.getAllByTestId('file-input')[0];
+  expect(imageFileInput).toHaveAttribute('accept', 'image/*');
+});
 
-    it('should accept document files for document upload', () => {
-      render(<UploadCompatibilityTest />, { wrapper });
-      
-      const documentFileInput = screen.getAllByTestId('file-input')[1];
-      expect(documentFileInput).toHaveAttribute('accept', '.pdf,.doc,.docx,.txt');
-    });
+it('should accept document files for document upload', () => {
+  render(<UploadCompatibilityTest />, { wrapper });
+  
+  const documentFileInput = screen.getAllByTestId('file-input')[1];
+  expect(documentFileInput).toHaveAttribute('accept', 'text/plain,text/plain; charset=utf-8,text/csv,application/json,application/xml,text/html,text/css,application/javascript,text/markdown,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/rtf,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/pdf,application/x-rar-compressed,application/x-7z-compressed,application/x-tar,application/gzip,application/x-gzip,application/x-bzip2,application/x-xz,application/octet-stream');
+});
+
+it('should accept JS files for document upload', () => {
+  render(<UploadCompatibilityTest />, { wrapper });
+  
+  const documentFileInput = screen.getAllByTestId('file-input')[1];
+  expect(documentFileInput).toHaveAttribute('accept', expect.stringContaining('application/javascript'));
+});
+
+it('should accept CSS files for document upload', () => {
+  render(<UploadCompatibilityTest />, { wrapper });
+  
+  const documentFileInput = screen.getAllByTestId('file-input')[1];
+  expect(documentFileInput).toHaveAttribute('accept', expect.stringContaining('text/css'));
+});
+
+it('should accept JSON files for document upload', () => {
+  render(<UploadCompatibilityTest />, { wrapper });
+  
+  const documentFileInput = screen.getAllByTestId('file-input')[1];
+  expect(documentFileInput).toHaveAttribute('accept', expect.stringContaining('application/json'));
+});
+
+it('should accept YAML files for document upload', () => {
+  render(<UploadCompatibilityTest />, { wrapper });
+  
+  const documentFileInput = screen.getAllByTestId('file-input')[1];
+  expect(documentFileInput).toHaveAttribute('accept', expect.stringContaining('text/yaml'));
+});
 
     it('should have correct media type for media file inputs', () => {
       render(<UploadCompatibilityTest />, { wrapper });
@@ -340,7 +368,7 @@ describe('UploadCompatibilityTest', () => {
         throw new Error('Upload failed');
       });
       
-      (require('../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadFile,
         isLoading: false,
       });
@@ -358,7 +386,7 @@ describe('UploadCompatibilityTest', () => {
     });
 
     it('should show loading state during upload', () => {
-      (require('../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
         mutate: jest.fn(),
         isLoading: true,
       });
@@ -377,17 +405,17 @@ describe('UploadCompatibilityTest', () => {
       const mockUploadMedia = jest.fn();
       const mockUploadUnifiedMedia = jest.fn();
       
-      (require('../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-file-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadFile,
         isLoading: false,
       });
       
-      (require('../hooks/use-upload-media-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-media-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadMedia,
         isLoading: false,
       });
       
-      (require('../hooks/use-upload-unified-media-mutation').default as jest.Mock).mockReturnValue({
+      (require('../../hooks/use-upload-unified-media-mutation').default as jest.Mock).mockReturnValue({
         mutate: mockUploadUnifiedMedia,
         isLoading: false,
       });
@@ -396,6 +424,10 @@ describe('UploadCompatibilityTest', () => {
       
       const mockImageFile = createMockFile('test-image.jpg', 'image/jpeg', 1024);
       const mockDocumentFile = createMockFile('test-document.pdf', 'application/pdf', 2048);
+      const mockJsFile = createMockFile('test-script.js', 'application/javascript', 1024);
+      const mockCssFile = createMockFile('test-styles.css', 'text/css', 1024);
+      const mockJsonFile = createMockFile('test-data.json', 'application/json', 1024);
+      const mockYamlFile = createMockFile('test-config.yaml', 'text/yaml', 1024);
       
       // Test all upload methods
       const fileInputs = screen.getAllByTestId('file-input');

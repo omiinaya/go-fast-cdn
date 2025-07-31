@@ -80,14 +80,17 @@ func serveFromFilesystem(router gin.IRouter) {
 	// but exclude API routes
 	engine.NoRoute(func(c *gin.Context) {
 		path := c.Request.URL.Path
+		fmt.Printf("[DEBUG] NoRoute called for path: %s\n", path)
 
 		// Don't serve index.html for API routes
 		if strings.HasPrefix(path, "/api/") {
+			fmt.Printf("[DEBUG] NoRoute: API endpoint not found: %s\n", path)
 			c.JSON(404, gin.H{"error": "API endpoint not found"})
 			return
 		}
 
 		// Serve index.html for all other routes (SPA support)
+		fmt.Printf("[DEBUG] NoRoute: Serving index.html for path: %s\n", path)
 		c.File(filepath.Join(uiBuildPath, "index.html"))
 	})
 }
