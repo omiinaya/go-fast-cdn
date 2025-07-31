@@ -9,7 +9,7 @@ import (
 // Migrate runs database migrations for all model structs using
 // the global DB instance. This would typically be called on app startup.
 func Migrate() {
-	DB.AutoMigrate(&models.Image{}, &models.Doc{}, &models.User{}, &models.UserSession{}, &models.PasswordReset{})
+	DB.AutoMigrate(&models.Media{}, &models.Image{}, &models.Doc{}, &models.User{}, &models.UserSession{}, &models.PasswordReset{})
 }
 
 // MigrateWithMedia runs database migrations including the new media table.

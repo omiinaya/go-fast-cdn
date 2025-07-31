@@ -7,8 +7,18 @@ interface DocCardUploadProps {
   fileName?: string;
 }
 
+// Helper function to check if an object is a File without using instanceof
+const isFileObject = (obj: any): obj is File => {
+  return obj &&
+         typeof obj === 'object' &&
+         typeof obj.name === 'string' &&
+         typeof obj.size === 'number' &&
+         typeof obj.type === 'string' &&
+         typeof obj.slice === 'function';
+};
+
 const DocCardUpload = ({ media, onClickDelete, fileName }: DocCardUploadProps) => {
-  const displayName = fileName || (media instanceof File ? media.name : media.fileName);
+  const displayName = fileName || (isFileObject(media) ? media.name : media.fileName);
   
   return (
     <div className="bg-zinc-200 py-1 px-2 rounded-sm text-xs truncate inline-flex items-center">

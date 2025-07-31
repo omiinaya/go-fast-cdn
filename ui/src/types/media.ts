@@ -228,6 +228,16 @@ export function convertMediaToImageDimensions(media: Media): ImageDimensions | n
  * Helper function to get media URL based on media type
  */
 export function getMediaUrl(media: Media, baseUrl?: string): string {
+  // Use the downloadUrl from the media object if available
+  if (media.downloadUrl) {
+    // If downloadUrl doesn't include protocol, add it
+    if (media.downloadUrl.startsWith('localhost:')) {
+      return `${window.location.protocol}//${media.downloadUrl}`;
+    }
+    return media.downloadUrl;
+  }
+  
+  // Fallback to legacy URL structure if downloadUrl is not available
   const resolvedBaseUrl = baseUrl || `${window.location.protocol}//${window.location.host}/api/cdn/download`;
   
   switch (media.mediaType) {

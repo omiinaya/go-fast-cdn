@@ -7,13 +7,23 @@ interface ImageCardUploadProps {
   fileName?: string;
 }
 
+// Helper function to check if an object is a File without using instanceof
+const isFileObject = (obj: any): obj is File => {
+  return obj &&
+         typeof obj === 'object' &&
+         typeof obj.name === 'string' &&
+         typeof obj.size === 'number' &&
+         typeof obj.type === 'string' &&
+         typeof obj.slice === 'function';
+};
+
 const ImageCardUpload = ({
   media,
   onClickDelete,
   fileName,
 }: ImageCardUploadProps) => {
   const getImageUrl = (): string => {
-    if (media instanceof File) {
+    if (isFileObject(media)) {
       return URL.createObjectURL(media);
     } else if (isImageMedia(media)) {
       return media.downloadUrl || media.thumbnailUrl || '';
@@ -21,7 +31,7 @@ const ImageCardUpload = ({
     return '';
   };
 
-  const displayName = fileName || (media instanceof File ? media.name : media.fileName);
+  const displayName = fileName || (isFileObject(media) ? media.name : media.fileName);
 
   return (
     <div className="relative w-32">

@@ -2,7 +2,9 @@ package handlers
 
 import (
 	"crypto/md5"
+	"fmt"
 	"image"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"path/filepath"
@@ -12,14 +14,26 @@ import (
 	"github.com/kevinanielsen/go-fast-cdn/src/util"
 )
 
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // HandleMediaUpload handles the upload of both images and documents
 func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
+	fmt.Printf("[DEBUG] HandleMediaUpload called\n")
+
 	// Get the file from the form
 	fileHeader, err := c.FormFile("file")
 	if err != nil {
+		fmt.Printf("[DEBUG] Failed to read file: %s\n", err.Error())
 		c.String(http.StatusBadRequest, "Failed to read file: %s", err.Error())
 		return
 	}
+	fmt.Printf("[DEBUG] File header received: Name=%s, Size=%d, Header=%+v\n", fileHeader.Filename, fileHeader.Size, fileHeader.Header)
 
 	// Get the custom filename if provided
 	newName := c.PostForm("filename")
@@ -34,21 +48,71 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 
 	// Read the first 512 bytes to detect the content type
 	fileBuffer := make([]byte, 512)
-	_, err = file.Read(fileBuffer)
+	bytesRead, err := file.Read(fileBuffer)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "Failed to read file: %s", err.Error())
 		return
 	}
 
+	// Log detailed debugging information
+	fmt.Printf("File: %s, Size: %d, Bytes read: %d\n", fileHeader.Filename, fileHeader.Size, bytesRead)
+	fmt.Printf("File buffer content (first 100 bytes): %x\n", fileBuffer[:min(100, bytesRead)])
+	fmt.Printf("File buffer content (as string): %s\n", string(fileBuffer[:min(100, bytesRead)]))
+
 	// Detect the file type
 	fileType := http.DetectContentType(fileBuffer)
+	// Log the detected file type for debugging
+	fmt.Printf("Detected file type: %s\n", fileType)
+
+	// Also try to detect from file extension
+	ext := filepath.Ext(fileHeader.Filename)
+	fmt.Printf("File extension: %s\n", ext)
+
+	// Fallback mechanism: if detected as application/octet-stream, try to determine from extension
+	if fileType == "application/octet-stream" {
+		fmt.Printf("File detected as application/octet-stream, trying fallback detection from extension\n")
+		switch ext {
+		case ".txt":
+			fileType = "text/plain"
+			fmt.Printf("Fallback: setting file type to text/plain based on .txt extension\n")
+		case ".csv":
+			fileType = "text/csv"
+			fmt.Printf("Fallback: setting file type to text/csv based on .csv extension\n")
+		case ".json":
+			fileType = "application/json"
+			fmt.Printf("Fallback: setting file type to application/json based on .json extension\n")
+		case ".xml":
+			fileType = "application/xml"
+			fmt.Printf("Fallback: setting file type to application/xml based on .xml extension\n")
+		case ".html", ".htm":
+			fileType = "text/html"
+			fmt.Printf("Fallback: setting file type to text/html based on %s extension\n", ext)
+		case ".css":
+			fileType = "text/css"
+			fmt.Printf("Fallback: setting file type to text/css based on .css extension\n")
+		case ".js":
+			fileType = "application/javascript"
+			fmt.Printf("Fallback: setting file type to application/javascript based on .js extension\n")
+		case ".md":
+			fileType = "text/markdown"
+			fmt.Printf("Fallback: setting file type to text/markdown based on .md extension\n")
+		}
+		fmt.Printf("Final file type after fallback: %s\n", fileType)
+	}
+
+	// Reset file position to beginning for hash calculation
+	if _, err := file.Seek(0, 0); err != nil {
+		fmt.Printf("Warning: Failed to reset file position: %v\n", err)
+	}
 
 	// Determine media type and validate
 	utilMediaType, err := util.GetMediaTypeFromMIME(fileType)
 	if err != nil {
+		fmt.Printf("Failed to get media type from MIME '%s': %v\n", fileType, err)
 		c.String(http.StatusBadRequest, "Invalid file type: %s", err.Error())
 		return
 	}
+	fmt.Printf("Successfully determined media type: %s\n", utilMediaType)
 
 	// Convert util.MediaType to models.MediaType
 	var mediaType models.MediaType
@@ -58,15 +122,30 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 	case util.MediaTypeDocument:
 		mediaType = models.MediaTypeDocument
 	case util.MediaTypeVideo:
-		mediaType = models.MediaType("video") // Add to models if needed
+		mediaType = models.MediaTypeVideo
 	case util.MediaTypeAudio:
-		mediaType = models.MediaType("audio") // Add to models if needed
+		mediaType = models.MediaTypeAudio
 	default:
 		mediaType = models.MediaTypeDocument // Default fallback
 	}
 
-	// Calculate file hash
-	fileHashBuffer := md5.Sum(fileBuffer)
+	// Calculate file hash from the entire file content
+	// Reset file position and read the entire file
+	if _, err := file.Seek(0, 0); err != nil {
+		c.String(http.StatusInternalServerError, "Failed to reset file position: %s", err.Error())
+		return
+	}
+
+	// Read the entire file for hash calculation
+	fullFileContent, err := io.ReadAll(file)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "Failed to read full file content: %s", err.Error())
+		return
+	}
+
+	fileHashBuffer := md5.Sum(fullFileContent)
+	fmt.Printf("Calculated file hash from full content: %x\n", fileHashBuffer)
+	fmt.Printf("Full file size: %d bytes\n", len(fullFileContent))
 
 	// Determine the filename
 	var filename string
@@ -92,28 +171,39 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 
 	// For images, try to extract dimensions
 	if mediaType == models.MediaTypeImage {
+		fmt.Printf("[DEBUG] Attempting to extract image dimensions\n")
 		width, height, err := h.getImageDimensions(fileHeader)
 		if err == nil {
 			media.Width = &width
 			media.Height = &height
+			fmt.Printf("[DEBUG] Image dimensions extracted: %dx%d\n", width, height)
+		} else {
+			fmt.Printf("[DEBUG] Failed to extract image dimensions: %v\n", err)
 		}
 	}
 
 	// Check if file already exists
+	fmt.Printf("Checking if file exists in database with hash: %x\n", fileHashBuffer)
 	mediaInDatabase := h.repo.GetMediaByCheckSum(fileHashBuffer[:])
+	fmt.Printf("Database query result - Checksum length: %d, FileName: %s\n", len(mediaInDatabase.Checksum), mediaInDatabase.FileName)
 	if len(mediaInDatabase.Checksum) > 0 {
+		fmt.Printf("File already exists in database: %s\n", mediaInDatabase.FileName)
 		c.JSON(http.StatusConflict, gin.H{
 			"error": "File already exists",
 		})
 		return
 	}
+	fmt.Printf("File not found in database, proceeding with upload\n")
 
 	// Save to database
+	fmt.Printf("[DEBUG] Saving media to database: %+v\n", media)
 	savedFilename, err := h.repo.AddMedia(media)
 	if err != nil {
+		fmt.Printf("[DEBUG] Failed to save media to database: %v\n", err)
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return
 	}
+	fmt.Printf("[DEBUG] Successfully saved media to database with filename: %s\n", savedFilename)
 
 	// Use the unified media directory for all file types
 	uploadPath := util.GetMediaUploadPath()
@@ -126,11 +216,14 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 
 	// Save the file to the unified media directory
 	filePath := filepath.Join(uploadPath, savedFilename)
+	fmt.Printf("[DEBUG] Saving file to path: %s\n", filePath)
 	err = c.SaveUploadedFile(fileHeader, filePath)
 	if err != nil {
+		fmt.Printf("[DEBUG] Failed to save file: %s\n", err.Error())
 		c.String(http.StatusInternalServerError, "Failed to save file: %s", err.Error())
 		return
 	}
+	fmt.Printf("[DEBUG] File saved successfully to: %s\n", filePath)
 
 	// Return success response with unified URL path
 	body := gin.H{
@@ -143,17 +236,23 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 
 // getImageDimensions extracts the dimensions of an image file
 func (h *MediaHandler) getImageDimensions(fileHeader *multipart.FileHeader) (int, int, error) {
+	fmt.Printf("[DEBUG] getImageDimensions called for file: %s\n", fileHeader.Filename)
+
 	file, err := fileHeader.Open()
 	if err != nil {
+		fmt.Printf("[DEBUG] Failed to open file for dimension extraction: %v\n", err)
 		return 0, 0, err
 	}
 	defer file.Close()
 
-	img, _, err := image.Decode(file)
+	fmt.Printf("[DEBUG] Attempting to decode image\n")
+	img, format, err := image.Decode(file)
 	if err != nil {
+		fmt.Printf("[DEBUG] Failed to decode image: %v\n", err)
 		return 0, 0, err
 	}
 
+	fmt.Printf("[DEBUG] Successfully decoded image format: %s, dimensions: %dx%d\n", format, img.Bounds().Dx(), img.Bounds().Dy())
 	return img.Bounds().Dx(), img.Bounds().Dy(), nil
 }
 

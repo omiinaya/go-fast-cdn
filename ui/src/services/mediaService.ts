@@ -46,7 +46,39 @@ export const mediaService = {
   async getAllMedia(params?: GetAllMediaParams): Promise<Media[]> {
     const queryParams = params?.mediaType ? `?type=${params.mediaType}` : '';
     const response = await cdnApiClient.get<Media[]>(`/media/all${queryParams}`);
-    return response.data;
+    
+    // For each media item, fetch the metadata to get the download URL
+    const mediaWithMetadata = await Promise.all(
+      response.data.map(async (media) => {
+        try {
+          const metadata = await this.getMediaMetadata(media.fileName, media.mediaType);
+          
+          // Create a new media object with the metadata
+          const enhancedMedia = {
+            ...media,
+            downloadUrl: metadata.download_url,
+            fileSize: metadata.file_size,
+          };
+          
+          // Add dimensions for images if available
+          if (media.mediaType === 'image' && metadata.width && metadata.height) {
+            return {
+              ...enhancedMedia,
+              width: metadata.width,
+              height: metadata.height,
+            } as Media;
+          }
+          
+          return enhancedMedia as Media;
+        } catch (error) {
+          // If metadata fetch fails, use the media object as-is
+          console.warn(`Failed to fetch metadata for ${media.fileName}:`, error);
+          return media;
+        }
+      })
+    );
+    
+    return mediaWithMetadata;
   },
 
   /**
@@ -80,7 +112,12 @@ export const mediaService = {
    */
   async deleteMedia(params: MediaDeleteParams): Promise<{ message: string; fileName: string }> {
     const response = await cdnApiClient.delete<{ message: string; fileName: string }>(
-      `/delete/${params.mediaType}/${params.fileName}`
+      `/delete/media/${params.fileName}`,
+      {
+        params: {
+          type: params.mediaType
+        }
+      }
     );
     return response.data;
   },
@@ -94,7 +131,7 @@ export const mediaService = {
     form.append('newname', params.newFileName);
     form.append('type', params.mediaType);
     
-    const response = await cdnApiClient.put<{ status: string }>(`/rename/${params.mediaType}`, form, {
+    const response = await cdnApiClient.put<{ status: string }>(`/rename/media`, form, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

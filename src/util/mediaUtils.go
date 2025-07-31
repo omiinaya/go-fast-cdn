@@ -2,6 +2,7 @@ package util
 
 import (
 	"errors"
+	"fmt"
 	"mime"
 	"net/http"
 	"path/filepath"
@@ -47,10 +48,17 @@ func GetMediaTypes() map[MediaType]MediaTypeInfo {
 		MediaTypeDocument: {
 			Type:        MediaTypeDocument,
 			DisplayName: "Document",
-			Extensions:  []string{".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".rtf", ".odt", ".ods", ".odp", ".zip", ".rar", ".7z"},
+			Extensions:  []string{".txt", ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".rtf", ".odt", ".ods", ".odp", ".zip", ".rar", ".7z", ".csv", ".json", ".xml", ".html", ".htm", ".css", ".js", ".md"},
 			MimeTypes: []string{
 				"text/plain",
 				"text/plain; charset=utf-8",
+				"text/csv",
+				"application/json",
+				"application/xml",
+				"text/html",
+				"text/css",
+				"application/javascript",
+				"text/markdown",
 				"application/pdf",
 				"application/msword",
 				"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -129,15 +137,19 @@ func GetMediaTypeFromMIME(mimeType string) (MediaType, error) {
 		return "", errors.New("empty MIME type")
 	}
 
+	fmt.Printf("[DEBUG] GetMediaTypeFromMIME called with MIME type: %s\n", mimeType)
+
 	mediaTypes := GetMediaTypes()
 	for mediaType, info := range mediaTypes {
 		for _, validMime := range info.MimeTypes {
 			if mimeType == validMime {
+				fmt.Printf("[DEBUG] Found matching media type: %s for MIME: %s\n", mediaType, mimeType)
 				return mediaType, nil
 			}
 		}
 	}
 
+	fmt.Printf("[DEBUG] No matching media type found for MIME: %s\n", mimeType)
 	return "", errors.New("unsupported MIME type: " + mimeType)
 }
 

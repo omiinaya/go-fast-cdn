@@ -47,8 +47,8 @@ func (h *MediaHandler) HandleMediaMetadata(c *gin.Context) {
 		return
 	}
 
-	// Get file path
-	filePath := filepath.Join(util.ExPath, "uploads", mediaType, fileName)
+	// Get file path - use unified media directory for all files
+	filePath := filepath.Join(util.GetMediaUploadPath(), fileName)
 
 	// Check if file exists and get file info
 	fileInfo, err := os.Stat(filePath)
@@ -69,7 +69,7 @@ func (h *MediaHandler) HandleMediaMetadata(c *gin.Context) {
 	// Create base response body
 	body := gin.H{
 		"filename":     fileName,
-		"download_url": c.Request.Host + "/api/cdn/download/" + mediaType + "/" + fileName,
+		"download_url": c.Request.Host + util.GetMediaURLPath(fileName),
 		"file_size":    fileInfo.Size(),
 		"type":         media.Type,
 	}

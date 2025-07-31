@@ -60,6 +60,9 @@ func (s *Server) AddApiRoutes() {
 		cdn.Static("/download/media", util.ExPath+"/uploads/media")
 		cdn.Static("/download/images", util.ExPath+"/uploads/images")
 		cdn.Static("/download/docs", util.ExPath+"/uploads/docs")
+		cdn.Static("/uploads/media", util.ExPath+"/uploads/media")
+		cdn.Static("/uploads/images", util.ExPath+"/uploads/images")
+		cdn.Static("/uploads/docs", util.ExPath+"/uploads/docs")
 
 		// Legacy endpoints for backward compatibility
 		cdn.GET("/doc/all", docHandler.HandleAllDocs)

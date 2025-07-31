@@ -8,15 +8,17 @@ type MediaType string
 const (
 	MediaTypeImage    MediaType = "image"
 	MediaTypeDocument MediaType = "document"
+	MediaTypeVideo    MediaType = "video"
+	MediaTypeAudio    MediaType = "audio"
 )
 
 // Media represents a unified media entity that can be either an image or a document
 type Media struct {
 	gorm.Model
 
-	FileName string    `json:"file_name" gorm:"uniqueIndex"`
+	FileName string    `json:"fileName" gorm:"uniqueIndex;column:file_name"`
 	Checksum []byte    `json:"checksum"`
-	Type     MediaType `json:"type" gorm:"type:varchar(20);not null;default:'document'"`
+	Type     MediaType `json:"mediaType" gorm:"type:varchar(20);not null;default:'document';column:type"`
 
 	// Image-specific fields (will be empty/null for non-image media)
 	Width  *int `json:"width,omitempty" gorm:"default:null"`

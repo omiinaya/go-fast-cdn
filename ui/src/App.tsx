@@ -8,6 +8,7 @@ import Login from "./modules/auth/Login";
 import Register from "./modules/auth/Register";
 import ProtectedRoute from "./modules/auth/ProtectedRoute";
 import Files from "./modules/content/files";
+import MediaFiles from "./modules/content/media-files";
 import UserSettings from "./modules/settings/UserSettings";
 import AdminRoute from "./modules/auth/AdminRoute";
 import UserManagementPage from "./modules/master-data/user-management/user-management-page";
@@ -31,8 +32,10 @@ function AppContent() {
             <SidebarNav />
             <main className="m-4 h-auto w-full">
               <Route path="/">{<DashboardPage />}</Route>
-              <Route path="/images">{<Files type="images" />}</Route>
-              <Route path="/documents">{<Files type="documents" />}</Route>
+              <Route path="/images">{<MediaFiles mediaType="image" />}</Route>
+              <Route path="/documents">{<MediaFiles mediaType="document" />}</Route>
+              <Route path="/videos">{<MediaFiles mediaType="video" />}</Route>
+              <Route path="/audio">{<MediaFiles mediaType="audio" />}</Route>
               <Route path="/settings">{<UserSettings />}</Route>
               <Route path="/admin/user-management">
                 <AdminRoute>

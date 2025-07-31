@@ -79,8 +79,8 @@ func (h *MediaHandler) HandleMediaResize(c *gin.Context) {
 		return
 	}
 
-	// Construct the file path using the media type
-	filepath := filepath.Join(util.ExPath, "uploads", string(media.Type), filename)
+	// Construct the file path using the unified media directory
+	filepath := filepath.Join(util.GetMediaUploadPath(), filename)
 
 	// Open the image file
 	img, err := imgio.Open(filepath)

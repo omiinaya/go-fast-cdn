@@ -1,6 +1,8 @@
 package database
 
 import (
+	"fmt"
+
 	"github.com/kevinanielsen/go-fast-cdn/src/models"
 	"gorm.io/gorm"
 )
@@ -23,7 +25,13 @@ func (repo *mediaRepo) GetAllMedia() []models.Media {
 
 func (repo *mediaRepo) GetMediaByCheckSum(checksum []byte) models.Media {
 	var entry models.Media
-	repo.DB.Where("checksum = ?", checksum).First(&entry)
+	fmt.Printf("[DB] GetMediaByCheckSum called with checksum: %x\n", checksum)
+	result := repo.DB.Where("checksum = ?", checksum).First(&entry)
+	if result.Error != nil {
+		fmt.Printf("[DB] Error querying media by checksum: %v\n", result.Error)
+	} else {
+		fmt.Printf("[DB] Found media record: ID=%d, FileName=%s, Type=%s\n", entry.ID, entry.FileName, entry.Type)
+	}
 	return entry
 }
 
@@ -40,10 +48,13 @@ func (repo *mediaRepo) GetMediaByType(mediaType models.MediaType) []models.Media
 }
 
 func (repo *mediaRepo) AddMedia(media models.Media) (string, error) {
+	fmt.Printf("[DB] AddMedia called with: %+v\n", media)
 	result := repo.DB.Create(&media)
 	if result.Error != nil {
+		fmt.Printf("[DB] Error creating media record: %v\n", result.Error)
 		return "", result.Error
 	}
+	fmt.Printf("[DB] Successfully created media record with ID: %d\n", media.ID)
 	return media.FileName, nil
 }
 

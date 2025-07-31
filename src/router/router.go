@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/kevinanielsen/go-fast-cdn/src/middleware"
+	"github.com/kevinanielsen/go-fast-cdn/src/util"
 	"github.com/kevinanielsen/go-fast-cdn/ui"
 )
 
@@ -20,6 +21,10 @@ func Router() {
 	// Add all the API routes
 	s.AddApiRoutes()
 
+	// Add static file serving for uploads
+	s.Engine.Static("/uploads/media", util.ExPath+"/uploads/media")
+	s.Engine.Static("/uploads/images", util.ExPath+"/uploads/images")
+	s.Engine.Static("/uploads/docs", util.ExPath+"/uploads/docs")
 	// Add the embedded ui routes
 	ui.AddRoutes(s.Engine)
 

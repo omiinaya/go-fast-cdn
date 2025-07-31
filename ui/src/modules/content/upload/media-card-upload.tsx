@@ -14,9 +14,19 @@ const MediaCardUpload = ({
   fileName,
   mediaType,
 }: MediaCardUploadProps) => {
+  // Helper function to check if an object is a File without using instanceof
+  const isFileObject = (obj: any): obj is File => {
+    return obj &&
+           typeof obj === 'object' &&
+           typeof obj.name === 'string' &&
+           typeof obj.size === 'number' &&
+           typeof obj.type === 'string' &&
+           typeof obj.slice === 'function';
+  };
+
   const getMediaIcon = () => {
     // If it's a File object, determine type from MIME type
-    if (media instanceof File) {
+    if (isFileObject(media)) {
       const file = media as File;
       if (file.type.startsWith('image/')) {
         return (
@@ -124,7 +134,7 @@ const MediaCardUpload = ({
     }
   };
 
-  const displayName = fileName || (media instanceof File ? (media as File).name : (media as Media).fileName);
+  const displayName = fileName || (isFileObject(media) ? media.name : (media as Media).fileName);
 
   return (
     <div className="relative inline-block">

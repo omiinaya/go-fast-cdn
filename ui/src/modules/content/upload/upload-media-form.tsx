@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import MediaCardUpload from "./media-card-upload.tsx";
 import FileInputMedia from "./file-input-media";
 import toast from "react-hot-toast";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+//import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MediaType } from "@/types/media";
 
 interface UploadMediaProps {
@@ -64,11 +64,11 @@ const UploadMediaForm = ({
       }
     }
     
-    // Check file types
-    const acceptedTypes = getAcceptedTypes(mediaType);
+    // Check file types - accept all supported media types
+    const acceptedTypes = getAllAcceptedTypes();
     for (const file of newFiles) {
       if (!acceptedTypes.includes(file.type)) {
-        return `File "${file.name}" is not a valid ${mediaType} file.`;
+        return `File "${file.name}" is not a supported media type.`;
       }
     }
     
@@ -139,6 +139,15 @@ const UploadMediaForm = ({
     }
   };
 
+  const getAllAcceptedTypes = (): string[] => {
+    return [
+      ...getAcceptedTypes("image"),
+      ...getAcceptedTypes("document"),
+      ...getAcceptedTypes("video"),
+      ...getAcceptedTypes("audio"),
+    ];
+  };
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -156,22 +165,11 @@ const UploadMediaForm = ({
         return;
       }
 
-      const acceptedTypes = getAcceptedTypes(mediaType);
-      const isValidFiles = droppedFiles.every((file) =>
-        acceptedTypes.includes(file.type)
-      );
-
-      if (!isValidFiles) {
-        toast.error(
-          `Invalid file type. Please upload ${mediaType} files only.`
-        );
-        return;
-      }
 
       if (droppedFiles.length === 0) return;
       onChangeFiles([...files, ...droppedFiles]);
     },
-    [isLoading, onChangeFiles, files, mediaType, maxFileSize, maxFiles]
+    [isLoading, onChangeFiles, files, maxFileSize, maxFiles]
   );
 
   const handleClick = useCallback(() => {
@@ -203,6 +201,15 @@ const UploadMediaForm = ({
       default:
         return "";
     }
+  };
+
+  const getAllAcceptAttribute = (): string => {
+    return [
+      getAcceptAttribute("image"),
+      getAcceptAttribute("document"),
+      getAcceptAttribute("video"),
+      getAcceptAttribute("audio"),
+    ].join(",");
   };
 
   const getFileCountText = () => {
@@ -245,92 +252,34 @@ const UploadMediaForm = ({
           </div>
         </div>
       ) : (
-        <div className="flex flex-col justify-center items-center h-full">
-          {disableMediaTypeSwitching ? (
-            // When media type switching is disabled, show content without tabs
-            <>
-              {isDragOver ? (
-                <div className="text-center">
-                  <p className="text-blue-600 font-medium">
-                    Drop files here to upload
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <p className="text-gray-500 text-center mb-2">
-                    Drop your {getMediaTypeName(mediaType).toLowerCase()} here, or click to select files.
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Max file size: {Math.round(maxFileSize / (1024 * 1024))}MB | Max files: {maxFiles}
-                  </p>
-                  <input
-                    type="file"
-                    accept={getAcceptAttribute(mediaType)}
-                    multiple
-                    name={mediaType}
-                    id={mediaType}
-                    aria-label={`Select ${getMediaTypeName(mediaType)}`}
-                    ref={fileRef}
-                    className="hidden"
-                    onChange={handleOnChangeFiles}
-                  />
-                </div>
-              )}
-            </>
-          ) : (
-            // When media type switching is enabled, show tabs with content
-            <Tabs
-              onValueChange={(value) => {
-                onChangeMediaType(value as MediaType);
-              }}
-              value={mediaType}
-            >
-              <TabsList
-                className="self-center mb-4"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <TabsTrigger value="image">Images</TabsTrigger>
-                <TabsTrigger value="document">Documents</TabsTrigger>
-                <TabsTrigger value="video">Videos</TabsTrigger>
-                <TabsTrigger value="audio">Audio</TabsTrigger>
-              </TabsList>
-
-              {isDragOver ? (
-                <div className="text-center">
-                  <p className="text-blue-600 font-medium">
-                    Drop files here to upload
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <FileInputMedia
-                    mediaType="image"
-                    fileRef={fileRef}
-                    onFileChange={handleOnChangeFiles}
-                    accept={getAcceptAttribute("image")}
-                  />
-                  <FileInputMedia
-                    mediaType="document"
-                    fileRef={fileRef}
-                    onFileChange={handleOnChangeFiles}
-                    accept={getAcceptAttribute("document")}
-                  />
-                  <FileInputMedia
-                    mediaType="video"
-                    fileRef={fileRef}
-                    onFileChange={handleOnChangeFiles}
-                    accept={getAcceptAttribute("video")}
-                  />
-                  <FileInputMedia
-                    mediaType="audio"
-                    fileRef={fileRef}
-                    onFileChange={handleOnChangeFiles}
-                    accept={getAcceptAttribute("audio")}
-                  />
-                </>
-              )}
-            </Tabs>
-          )}
+         <div className="flex flex-col justify-center items-center h-full">
+           {isDragOver ? (
+             <div className="text-center">
+               <p className="text-blue-600 font-medium">
+                 Drop files here to upload
+               </p>
+             </div>
+           ) : (
+             <div className="text-center">
+               <p className="text-gray-500 text-center mb-2">
+                 Drop your media files here, or click to select files.
+               </p>
+               <p className="text-xs text-gray-400">
+                 Max file size: {Math.round(maxFileSize / (1024 * 1024))}MB | Max files: {maxFiles}
+               </p>
+               <input
+                 type="file"
+                 accept={getAllAcceptAttribute()}
+                 multiple
+                 name="media"
+                 id="media"
+                 aria-label="Select media files"
+                 ref={fileRef}
+                 className="hidden"
+                 onChange={handleOnChangeFiles}
+               />
+             </div>
+           )}
         </div>
       )}
     </div>

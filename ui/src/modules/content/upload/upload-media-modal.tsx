@@ -35,6 +35,54 @@ const UploadMediaModal = ({
   const [open, setOpen] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
+  // Function to determine media type based on file type
+  const determineMediaType = (file: File): MediaType => {
+    const imageTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "image/webp",
+      "image/gif",
+      "image/bmp",
+      "image/svg+xml",
+    ];
+    
+    const documentTypes = [
+      "text/plain",
+      "application/zip",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/pdf",
+      "application/rtf",
+      "application/x-freearc",
+    ];
+    
+    const videoTypes = [
+      "video/mp4",
+      "video/webm",
+      "video/ogg",
+      "video/quicktime",
+      "video/x-msvideo",
+    ];
+    
+    const audioTypes = [
+      "audio/mpeg",
+      "audio/ogg",
+      "audio/wav",
+      "audio/webm",
+      "audio/aac",
+    ];
+    
+    if (imageTypes.includes(file.type)) return "image";
+    if (documentTypes.includes(file.type)) return "document";
+    if (videoTypes.includes(file.type)) return "video";
+    if (audioTypes.includes(file.type)) return "audio";
+    
+    return "other";
+  };
+
   // Set initial tab based on mediaType when placement is header, otherwise default to image
   const [selectedMediaType, setSelectedMediaType] = useState<MediaType>(
     placement === "header" && mediaType ? mediaType : "image"
@@ -63,9 +111,11 @@ const UploadMediaModal = ({
       return Promise.all(
         files.map((file) => {
           const sanitizedFile = sanitizeFileName(file);
+          // Determine media type for each file individually
+          const fileType = determineMediaType(file);
           return uploadMediaMutation.mutateAsync({
             file: sanitizedFile,
-            mediaType: selectedMediaType,
+            mediaType: fileType,
           });
         })
       );
@@ -77,9 +127,12 @@ const UploadMediaModal = ({
         queryClient.invalidateQueries({
           queryKey: [constant.queryKeys.dashboard],
         }),
-        queryClient.invalidateQueries({
-          queryKey: constant.queryKeys.media(selectedMediaType),
-        }),
+        // Invalidate all media type queries since we might have uploaded multiple types
+        ...(["image", "document", "video", "audio"] as MediaType[]).map(type =>
+          queryClient.invalidateQueries({
+            queryKey: constant.queryKeys.media(type),
+          })
+        ),
       ]);
       handleReset();
     },
@@ -127,8 +180,8 @@ const UploadMediaModal = ({
             Add {mediaType ? getMediaTypeName(mediaType) : "Media"}
           </Button>
         ) : (
-          <SidebarGroupAction title="Add Content">
-            <Plus /> <span className="sr-only">Add Content</span>
+          <SidebarGroupAction title="Add Media">
+            <Plus /> <span className="sr-only">Add Media</span>
           </SidebarGroupAction>
         )}
       </DialogTrigger>
@@ -136,7 +189,7 @@ const UploadMediaModal = ({
         <DialogHeader>
           <DialogTitle>Upload Media</DialogTitle>
           <DialogDescription>
-            {getMediaDescription(selectedMediaType)}
+            Upload images, documents, videos, or audio files. Supported formats will be automatically detected.
           </DialogDescription>
         </DialogHeader>
 
@@ -146,7 +199,7 @@ const UploadMediaModal = ({
           onChangeMediaType={setSelectedMediaType}
           files={files}
           onChangeFiles={setFiles}
-          disableMediaTypeSwitching={placement === "header"}
+          disableMediaTypeSwitching={true} // Always disable media type switching now
           maxFileSize={maxFileSize}
           maxFiles={maxFiles}
         />

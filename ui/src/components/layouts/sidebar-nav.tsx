@@ -14,11 +14,11 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "../ui/sidebar";
-import { FilesIcon, Image, LayoutDashboard, Users } from "lucide-react";
+import { FilesIcon, Image, LayoutDashboard, Users, Video, Music } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import UserProfile from "@/modules/auth/UserProfile";
-import UploadModal from "@/modules/content/upload/upload-modal";
+import UploadMediaModal from "@/modules/content/upload/upload-media-modal";
 
 interface NavigationItem {
   href: string;
@@ -48,6 +48,18 @@ const CONTENT_ITEMS: NavigationItem[] = [
     icon: FilesIcon,
     label: "Documents",
     tooltip: "Documents",
+  },
+  {
+    href: "/videos",
+    icon: Video,
+    label: "Videos",
+    tooltip: "Videos",
+  },
+  {
+    href: "/audio",
+    icon: Music,
+    label: "Audio",
+    tooltip: "Audio",
   },
 ];
 
@@ -126,9 +138,9 @@ const SidebarNav = () => {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel>Content</SidebarGroupLabel>
-          <UploadModal />
+          <SidebarGroupLabel>Media</SidebarGroupLabel>
           <SidebarGroupContent>
+            <UploadMediaModal />
             <NavigationSection
               items={CONTENT_ITEMS}
               currentLocation={location}
