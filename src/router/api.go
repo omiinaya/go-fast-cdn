@@ -10,8 +10,6 @@ import (
 	authHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/auth"
 	configHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/config"
 	dbHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/db"
-	dHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/docs"
-	iHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/image"
 	mHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/media"
 	"github.com/kevinanielsen/go-fast-cdn/src/middleware"
 	"github.com/kevinanielsen/go-fast-cdn/src/util"
@@ -55,8 +53,6 @@ func (s *Server) AddApiRoutes() {
 	}
 
 	cdn := api.Group("/cdn")
-	docHandler := dHandlers.NewDocHandler(database.NewDocRepo(database.DB))
-	imageHandler := iHandlers.NewImageHandler(database.NewImageRepo(database.DB))
 	mediaHandler := mHandlers.NewMediaHandler(database.NewMediaRepo(database.DB))
 
 	// Public CDN routes (read-only)
@@ -74,14 +70,13 @@ func (s *Server) AddApiRoutes() {
 		cdn.Static("/uploads/docs", util.ExPath+"/uploads/docs")
 
 		// Legacy endpoints for backward compatibility
-		cdn.GET("/doc/all", docHandler.HandleAllDocs)
-		cdn.GET("/doc/:filename", dHandlers.HandleDocMetadata)
-		cdn.GET("/image/all", imageHandler.HandleAllImages)
-		cdn.GET("/image/:filename", iHandlers.HandleImageMetadata)
+		cdn.GET("/doc/all", mediaHandler.HandleAllDocs)
+		cdn.GET("/doc/:filename", mediaHandler.HandleMediaMetadata)
+		cdn.GET("/image/all", mediaHandler.HandleAllImages)
+		cdn.GET("/image/:filename", mediaHandler.HandleMediaMetadata)
 
 		cdn.GET("/dashboard", handlers.NewDashboardHandler(
-			database.NewDocRepo(database.DB),
-			database.NewImageRepo(database.DB),
+			database.NewMediaRepo(database.DB),
 			database.NewUserRepo(database.DB),
 			database.NewConfigRepo(database.DB),
 		).GetDashboard)
@@ -120,7 +115,7 @@ func (s *Server) AddApiRoutes() {
 	{
 		resize.PUT("/media", mediaHandler.HandleMediaResize)
 		// Legacy endpoints for backward compatibility
-		resize.PUT("/image", iHandlers.HandleImageResize)
+		resize.PUT("/image", mediaHandler.HandleMediaResize)
 	}
 	// Admin-only routes
 	adminRoutes := api.Group("/admin")

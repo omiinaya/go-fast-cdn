@@ -7,10 +7,16 @@ import (
 	"gorm.io/gorm"
 )
 
+// imageRepo is deprecated and should not be used for new code.
+// Use mediaRepo instead.
+// This struct is kept for backward compatibility only.
 type imageRepo struct {
 	DB *gorm.DB
 }
 
+// NewImageRepo is deprecated and should not be used for new code.
+// Use NewMediaRepo instead.
+// This function is kept for backward compatibility only.
 func NewImageRepo(db *gorm.DB) models.ImageRepository {
 	return &imageRepo{DB: db}
 }

@@ -36,7 +36,16 @@ func ConnectToDB() {
 	}
 	log.Println("Connected to database!")
 
-	database.AutoMigrate(&models.Media{}, &models.Image{}, &models.Doc{}, &models.Config{})
+	database.AutoMigrate(&models.Media{}, &models.Config{})
+
+	// Create composite unique index on FileName and Type for Media model
+	mediaModel := models.Media{}
+	if err := mediaModel.AddCompositeUniqueIndex(database); err != nil {
+		log.Printf("Warning: Failed to create composite unique index for media model: %v", err)
+		// Don't panic here, as the AddCompositeUniqueIndex function now handles duplicates gracefully
+		// The application can continue to function even if index creation fails after cleanup attempts
+	}
+
 	DB = database
 	log.Println("Database initialized!")
 }

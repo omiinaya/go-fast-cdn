@@ -9,13 +9,27 @@ import (
 // Migrate runs database migrations for all model structs using
 // the global DB instance. This would typically be called on app startup.
 func Migrate() {
-	DB.AutoMigrate(&models.Media{}, &models.Image{}, &models.Doc{}, &models.User{}, &models.UserSession{}, &models.PasswordReset{})
+	DB.AutoMigrate(&models.Media{}, &models.User{}, &models.UserSession{}, &models.PasswordReset{})
+
+	// Create composite unique index on FileName and Type for Media model
+	mediaModel := models.Media{}
+	if err := mediaModel.AddCompositeUniqueIndex(DB); err != nil {
+		log.Printf("Warning: Failed to create composite unique index for media model: %v", err)
+		// Don't fail the migration, as the AddCompositeUniqueIndex function now handles duplicates gracefully
+	}
 }
 
 // MigrateWithMedia runs database migrations including the new media table.
 // This should be used after running the media unification migration.
 func MigrateWithMedia() {
-	DB.AutoMigrate(&models.Media{}, &models.Image{}, &models.Doc{}, &models.User{}, &models.UserSession{}, &models.PasswordReset{})
+	DB.AutoMigrate(&models.Media{}, &models.User{}, &models.UserSession{}, &models.PasswordReset{})
+
+	// Create composite unique index on FileName and Type for Media model
+	mediaModel := models.Media{}
+	if err := mediaModel.AddCompositeUniqueIndex(DB); err != nil {
+		log.Printf("Warning: Failed to create composite unique index for media model: %v", err)
+		// Don't fail the migration, as the AddCompositeUniqueIndex function now handles duplicates gracefully
+	}
 }
 
 // RunMediaMigration runs the media unification migration to merge images and docs tables into media table.

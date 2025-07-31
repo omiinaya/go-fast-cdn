@@ -80,12 +80,20 @@ const UploadForm = ({
           "text/csv",
           "application/json",
           "application/xml",
+          "text/xml",
           "text/html",
+          "text/html; charset=utf-8",
           "text/css",
+          "text/css; charset=utf-8",
           "application/javascript",
+          "text/javascript",
+          "application/javascript; charset=utf-8",
+          "text/javascript; charset=utf-8",
           "text/markdown",
           "text/yaml",
+          "text/yaml; charset=utf-8",
           "application/x-yaml",
+          "application/yaml",
           "application/zip",
           "application/msword",
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -166,7 +174,7 @@ const UploadForm = ({
       case "image":
         return "image/jpeg,image/png,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml";
       case "document":
-        return "text/plain,text/plain; charset=utf-8,text/csv,application/json,application/xml,text/html,text/css,application/javascript,text/markdown,text/yaml,application/x-yaml,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/rtf,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/pdf,application/x-rar-compressed,application/x-7z-compressed,application/x-tar,application/gzip,application/x-gzip,application/x-bzip2,application/x-xz,application/octet-stream";
+        return "text/plain,text/plain; charset=utf-8,text/csv,application/json,application/xml,text/xml,text/html,text/html; charset=utf-8,text/css,text/css; charset=utf-8,application/javascript,text/javascript,application/javascript; charset=utf-8,text/javascript; charset=utf-8,text/markdown,text/yaml,text/yaml; charset=utf-8,application/x-yaml,application/yaml,application/zip,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/rtf,application/vnd.oasis.opendocument.text,application/vnd.oasis.opendocument.spreadsheet,application/vnd.oasis.opendocument.presentation,application/pdf,application/x-rar-compressed,application/x-7z-compressed,application/x-tar,application/gzip,application/x-gzip,application/x-bzip2,application/x-xz,application/octet-stream";
       case "video":
         return "video/mp4,video/webm,video/ogg,video/quicktime,video/x-msvideo";
       case "audio":

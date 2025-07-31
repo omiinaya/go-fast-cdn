@@ -7,10 +7,16 @@ import (
 	"gorm.io/gorm"
 )
 
+// DocRepo is deprecated and should not be used for new code.
+// Use mediaRepo instead.
+// This struct is kept for backward compatibility only.
 type DocRepo struct {
 	DB *gorm.DB
 }
 
+// NewDocRepo is deprecated and should not be used for new code.
+// Use NewMediaRepo instead.
+// This function is kept for backward compatibility only.
 func NewDocRepo(db *gorm.DB) models.DocRepository {
 	return &DocRepo{DB: db}
 }

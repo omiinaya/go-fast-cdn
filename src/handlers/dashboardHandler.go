@@ -13,16 +13,14 @@ import (
 )
 
 type DashboardHandler struct {
-	DocRepo    models.DocRepository
-	ImageRepo  models.ImageRepository
+	MediaRepo  models.MediaRepository
 	UserRepo   models.UserRepository
 	ConfigRepo *database.ConfigRepo
 }
 
-func NewDashboardHandler(docRepo models.DocRepository, imageRepo models.ImageRepository, userRepo models.UserRepository, configRepo *database.ConfigRepo) *DashboardHandler {
+func NewDashboardHandler(mediaRepo models.MediaRepository, userRepo models.UserRepository, configRepo *database.ConfigRepo) *DashboardHandler {
 	return &DashboardHandler{
-		DocRepo:    docRepo,
-		ImageRepo:  imageRepo,
+		MediaRepo:  mediaRepo,
 		UserRepo:   userRepo,
 		ConfigRepo: configRepo,
 	}
@@ -39,8 +37,8 @@ func (h *DashboardHandler) GetDashboard(c *gin.Context) {
 			return nil
 		})
 
-	docs := h.DocRepo.GetAllDocs()
-	images := h.ImageRepo.GetAllImages()
+	docs := h.MediaRepo.GetAllDocs()
+	images := h.MediaRepo.GetAllImages()
 
 	sort.Slice(docs, func(i, j int) bool {
 		return docs[i].CreatedAt.After(docs[j].CreatedAt)

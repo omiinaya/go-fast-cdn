@@ -31,11 +31,20 @@ func (h *MediaHandler) HandleMediaRename(c *gin.Context) {
 		return
 	}
 
-	// Check if a file with the new name already exists
+	// Get the media type of the file being renamed
+	mediaWithOldName := h.repo.GetMediaByFileName(oldName)
+	if len(mediaWithOldName.Checksum) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "File not found",
+		})
+		return
+	}
+
+	// Check if a file with the new name and same type already exists
 	mediaWithNewName := h.repo.GetMediaByFileName(filteredNewName)
-	if len(mediaWithNewName.Checksum) > 0 {
+	if len(mediaWithNewName.Checksum) > 0 && mediaWithNewName.Type == mediaWithOldName.Type {
 		c.JSON(http.StatusConflict, gin.H{
-			"error": "File with this name already exists",
+			"error": "File with this name and type already exists",
 		})
 		return
 	}

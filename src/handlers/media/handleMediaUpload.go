@@ -179,18 +179,18 @@ func (h *MediaHandler) HandleMediaUpload(c *gin.Context) {
 	}
 	fmt.Printf("File content not found in database, proceeding with upload\n")
 
-	// Check if file already exists by filename (name-based duplicate detection)
-	fmt.Printf("Checking if file with name '%s' already exists in database\n", filteredFilename)
+	// Check if file already exists by filename and type (name-based duplicate detection)
+	fmt.Printf("Checking if file with name '%s' and type '%s' already exists in database\n", filteredFilename, mediaType)
 	mediaWithSameName := h.repo.GetMediaByFileName(filteredFilename)
-	if len(mediaWithSameName.Checksum) > 0 {
-		fmt.Printf("File with same name already exists in database: %s\n", mediaWithSameName.FileName)
+	if len(mediaWithSameName.Checksum) > 0 && mediaWithSameName.Type == mediaType {
+		fmt.Printf("File with same name and type already exists in database: %s\n", mediaWithSameName.FileName)
 		c.JSON(http.StatusConflict, gin.H{
-			"error":         "File with this name already exists",
+			"error":         "File with this name and type already exists",
 			"existing_file": mediaWithSameName.FileName,
 		})
 		return
 	}
-	fmt.Printf("File name not found in database, proceeding with upload\n")
+	fmt.Printf("File name and type not found in database, proceeding with upload\n")
 
 	// Save to database
 	fmt.Printf("[DEBUG] Saving media to database: %+v\n", media)

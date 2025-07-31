@@ -55,12 +55,12 @@ func (repo *mediaRepo) GetDocByFileName(fileName string) models.Media {
 func (repo *mediaRepo) AddMedia(media models.Media) (string, error) {
 	fmt.Printf("[DB] AddMedia called with: %+v\n", media)
 
-	// Check if a file with the same name already exists
+	// Check if a file with the same name and type already exists
 	var existingMedia models.Media
-	result := repo.DB.Where("file_name = ?", media.FileName).First(&existingMedia)
+	result := repo.DB.Where("file_name = ? AND type = ?", media.FileName, media.Type).First(&existingMedia)
 	if result.Error == nil {
-		fmt.Printf("[DB] File with name '%s' already exists in database\n", media.FileName)
-		return "", fmt.Errorf("file with name '%s' already exists", media.FileName)
+		fmt.Printf("[DB] File with name '%s' and type '%s' already exists in database\n", media.FileName, media.Type)
+		return "", fmt.Errorf("file with name '%s' and type '%s' already exists", media.FileName, media.Type)
 	}
 
 	result = repo.DB.Create(&media)
@@ -85,15 +85,21 @@ func (repo *mediaRepo) DeleteMedia(fileName string) (string, bool) {
 }
 
 func (repo *mediaRepo) RenameMedia(oldFileName, newFileName string) error {
-	// Check if a file with the new name already exists
-	var existingMedia models.Media
-	result := repo.DB.Where("file_name = ?", newFileName).First(&existingMedia)
-	if result.Error == nil {
-		return fmt.Errorf("file with name '%s' already exists", newFileName)
+	// Get the media type of the file being renamed
+	var media models.Media
+	result := repo.DB.Where("file_name = ?", oldFileName).First(&media)
+	if result.Error != nil {
+		return fmt.Errorf("file with name '%s' not found", oldFileName)
 	}
 
-	media := models.Media{}
-	return repo.DB.Model(&media).Where("file_name = ?", oldFileName).Update("file_name", newFileName).Error
+	// Check if a file with the new name and same type already exists
+	var existingMedia models.Media
+	result = repo.DB.Where("file_name = ? AND type = ?", newFileName, media.Type).First(&existingMedia)
+	if result.Error == nil {
+		return fmt.Errorf("file with name '%s' and type '%s' already exists", newFileName, media.Type)
+	}
+
+	return repo.DB.Model(&media).Update("file_name", newFileName).Error
 }
 
 // Backward compatibility methods for images

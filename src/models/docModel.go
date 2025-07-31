@@ -4,6 +4,9 @@ import (
 	"gorm.io/gorm"
 )
 
+// Doc is deprecated and should not be used for new code.
+// Use Media with Type = MediaTypeDocument instead.
+// This struct is kept for backward compatibility only.
 type Doc struct {
 	gorm.Model
 
@@ -11,6 +14,9 @@ type Doc struct {
 	Checksum []byte `json:"checksum"`
 }
 
+// DocRepository is deprecated and should not be used for new code.
+// Use MediaRepository instead.
+// This interface is kept for backward compatibility only.
 type DocRepository interface {
 	GetAllDocs() []Doc
 	GetDocByCheckSum(checksum []byte) Doc

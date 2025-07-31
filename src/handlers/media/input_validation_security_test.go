@@ -16,7 +16,7 @@ import (
 	authHandlers "github.com/kevinanielsen/go-fast-cdn/src/handlers/auth"
 	"github.com/kevinanielsen/go-fast-cdn/src/middleware"
 	"github.com/kevinanielsen/go-fast-cdn/src/models"
-	"github.com/kevinanielsen/go-fast-cdn/src/testutils"
+	testutils "github.com/kevinanielsen/go-fast-cdn/src/testUtils"
 	"github.com/kevinanielsen/go-fast-cdn/src/util"
 	"github.com/stretchr/testify/require"
 )

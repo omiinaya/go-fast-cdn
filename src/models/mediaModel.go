@@ -1,6 +1,10 @@
 package models
 
-import "gorm.io/gorm"
+import (
+	"fmt"
+
+	"gorm.io/gorm"
+)
 
 // MediaType defines the type of media stored
 type MediaType string
@@ -16,13 +20,76 @@ const (
 type Media struct {
 	gorm.Model
 
-	FileName string    `json:"fileName" gorm:"column:file_name;unique;not null"`
+	FileName string    `json:"fileName" gorm:"column:file_name;not null"`
 	Checksum []byte    `json:"checksum"`
 	Type     MediaType `json:"mediaType" gorm:"type:varchar(20);not null;default:'document';column:type"`
 
 	// Image-specific fields (will be empty/null for non-image media)
 	Width  *int `json:"width,omitempty" gorm:"default:null"`
 	Height *int `json:"height,omitempty" gorm:"default:null"`
+}
+
+// TableName specifies the table name for the Media model
+func (Media) TableName() string {
+	return "media"
+}
+
+// AddCompositeUniqueIndex adds a composite unique index on FileName and Type
+// This ensures that the combination of FileName and Type is unique across all media records
+func (Media) AddCompositeUniqueIndex(db *gorm.DB) error {
+	// First, try to create the index directly
+	err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_media_file_name_type ON media(file_name, type)").Error
+	if err == nil {
+		return nil
+	}
+
+	// If index creation fails due to constraint violation, we need to handle duplicates
+	// This can happen when there are existing records with duplicate (file_name, type) combinations
+
+	// Log the issue for debugging
+	fmt.Printf("Warning: Failed to create composite unique index due to existing duplicates: %v\n", err)
+
+	// Find and handle duplicate records
+	var duplicates []Media
+	err = db.Raw(`
+		SELECT file_name, type, COUNT(*) as count 
+		FROM media 
+		GROUP BY file_name, type 
+		HAVING COUNT(*) > 1
+	`).Scan(&duplicates).Error
+
+	if err != nil {
+		return fmt.Errorf("failed to find duplicate records: %w", err)
+	}
+
+	if len(duplicates) > 0 {
+		fmt.Printf("Found %d duplicate (file_name, type) combinations. Cleaning up...\n", len(duplicates))
+
+		// Remove duplicates by keeping the oldest record (lowest ID) for each combination
+		err = db.Exec(`
+			DELETE FROM media 
+			WHERE id NOT IN (
+				SELECT MIN(id) 
+				FROM media 
+				GROUP BY file_name, type
+			)
+		`).Error
+
+		if err != nil {
+			return fmt.Errorf("failed to remove duplicate records: %w", err)
+		}
+
+		fmt.Printf("Successfully removed duplicate records\n")
+	}
+
+	// Now try to create the index again
+	err = db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_media_file_name_type ON media(file_name, type)").Error
+	if err != nil {
+		return fmt.Errorf("failed to create composite unique index after cleanup: %w", err)
+	}
+
+	fmt.Printf("Successfully created composite unique index\n")
+	return nil
 }
 
 // ToImage converts a Media entity to an Image entity for backward compatibility

@@ -2,6 +2,9 @@ package models
 
 import "gorm.io/gorm"
 
+// Image is deprecated and should not be used for new code.
+// Use Media with Type = MediaTypeImage instead.
+// This struct is kept for backward compatibility only.
 type Image struct {
 	gorm.Model
 
@@ -9,6 +12,9 @@ type Image struct {
 	Checksum []byte `json:"checksum"`
 }
 
+// ImageRepository is deprecated and should not be used for new code.
+// Use MediaRepository instead.
+// This interface is kept for backward compatibility only.
 type ImageRepository interface {
 	GetAllImages() []Image
 	GetImageByCheckSum(checksum []byte) Image
